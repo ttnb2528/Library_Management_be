@@ -27,7 +27,7 @@ CREATE TABLE Genres (
 
 CREATE TABLE Publishers (
     publisher_id INT PRIMARY KEY AUTO_INCREMENT,
-    publisher_name VARCHAR(150) NOT NULL,
+    publisher_name VARCHAR(150),
     address text,
     email VARCHAR(255),
     representative_info TEXT
@@ -97,6 +97,7 @@ CREATE TABLE Users (
 
 -- Trigger
 -- Kiểm tra tính hợp lệ user
+DROP TRIGGER IF EXISTS trg_check_user_fields
 DELIMITER $$
 CREATE TRIGGER trg_check_user_fields
 BEFORE INSERT ON Users
@@ -144,6 +145,55 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- Kiểm tra tính hợp lệ Genres
+DROP TRIGGER IF EXISTS trg_check_genres_fields
+DROP TRIGGER IF EXISTS trg_check_genres_fields_update
+DELIMITER $$
+CREATE TRIGGER trg_check_genres_fields
+BEFORE INSERT ON Genres
+FOR EACH ROW
+BEGIN
+    IF NEW.genre_name IS NULL OR NEW.genre_name = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên thể loại không được để trống';
+    END IF;
+END $$
+
+CREATE TRIGGER trg_check_genres_fields_update
+BEFORE UPDATE ON Genres
+FOR EACH ROW
+BEGIN
+    IF NEW.genre_name IS NULL OR NEW.genre_name = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên thể loại không được để trống';
+    END IF;
+END $$
+DELIMITER ;
+
+-- Kiểm tra tính hợp lệ Publishers
+DROP TRIGGER IF EXISTS trg_check_publisher_fields
+DROP TRIGGER IF EXISTS trg_check_publisher_fields_update
+DELIMITER $$
+CREATE TRIGGER trg_check_publisher_fields
+BEFORE INSERT ON Publishers
+FOR EACH ROW
+BEGIN
+    IF NEW.publisher_name IS NULL OR NEW.publisher_name = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên nhà xuất bản không được để trống';
+    END IF;
+END $$
+
+CREATE TRIGGER trg_check_publisher_fields_update
+BEFORE UPDATE ON Publishers
+FOR EACH ROW
+BEGIN
+    IF NEW.publisher_name IS NULL OR NEW.publisher_name = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên nhà xuất bản không được để trống';
+    END IF;
+END $$
+DELIMITER ;
 
 
 -- Function
@@ -185,3 +235,32 @@ BEGIN
 END$$
 DELIMITER ;
 
+-- Kiểm tra thể loại đã có chưa?
+DROP FUNCTION IF EXISTS check_genres_exists
+DELIMITER $$
+CREATE FUNCTION check_genres_exists(value VARCHAR(255))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    DECLARE genresExists BOOLEAN DEFAULT FALSE;
+    
+        SET genresExists = EXISTS (SELECT 1 FROM Genres WHERE genre_name = value);
+    
+    RETURN genresExists;
+END$$
+DELIMITER ;
+
+-- Kiểm tra nhà xuất bản có chưa ?
+DROP FUNCTION IF EXISTS check_publisher_exists
+DELIMITER $$
+CREATE FUNCTION check_publisher_exists(value VARCHAR(255))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    DECLARE publisherExists BOOLEAN DEFAULT FALSE;
+
+        SET publisherExists = EXISTS (SELECT 1 FROM Publishers WHERE publisher_name = value);
+    
+    RETURN publisherExists;
+END$$
+DELIMITER ;
