@@ -1,22 +1,21 @@
-CREATE DATABASE library_management;
+CREATE DATABASE IF NOT EXISTS library_management;
 
 USE library_management;
 
-CREATE TABLE Books (
-    book_id INT PRIMARY KEY AUTO_INCREMENT,
-    title VARCHAR(255) NOT NULL,
-    author_id INT,
-    genre_id INT,
-    publisher_id INT,
-    publish_year YEAR,
-    FOREIGN KEY (author_id) REFERENCES Authors(author_id),
-    FOREIGN KEY (genre_id) REFERENCES Genres(genre_id),
-    FOREIGN KEY (publisher_id) REFERENCES Publishers(publisher_id)
-);
+DROP TABLE IF EXISTS BorrowDetails;
+DROP TABLE IF EXISTS Borrows;
+DROP TABLE IF EXISTS Employees;
+DROP TABLE IF EXISTS Readers;
+DROP TABLE IF EXISTS LibraryCards;
+DROP TABLE IF EXISTS Books;
+DROP TABLE IF EXISTS Publishers;
+DROP TABLE IF EXISTS Genres;
+DROP TABLE IF EXISTS Authors;
+DROP TABLE IF EXISTS Users;
 
 CREATE TABLE Authors (
     author_id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100),
     website VARCHAR(255),
     notes TEXT
 );
@@ -34,19 +33,19 @@ CREATE TABLE Publishers (
     representative_info TEXT
 );
 
+CREATE TABLE LibraryCards (
+    card_number INT PRIMARY KEY AUTO_INCREMENT,
+    start_date DATE,
+    end_date DATE,
+    notes TEXT
+);
+
 CREATE TABLE Readers (
     reader_id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
     address text,
     card_number INT,
     FOREIGN KEY (card_number) REFERENCES LibraryCards(card_number)
-);
-
-CREATE TABLE LibraryCards (
-    card_number INT PRIMARY KEY AUTO_INCREMENT,
-    start_date DATE,
-    end_date DATE,
-    notes TEXT
 );
 
 CREATE TABLE Employees (
@@ -65,6 +64,18 @@ CREATE TABLE Borrows (
     FOREIGN KEY (employee_id) REFERENCES Employees(employee_id)
 );
 
+CREATE TABLE Books (
+    book_id INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(255) NOT NULL,
+    author_id INT,
+    genre_id INT,
+    publisher_id INT,
+    publish_year YEAR,
+    FOREIGN KEY (author_id) REFERENCES Authors(author_id),
+    FOREIGN KEY (genre_id) REFERENCES Genres(genre_id),
+    FOREIGN KEY (publisher_id) REFERENCES Publishers(publisher_id)
+);
+
 CREATE TABLE BorrowDetails (
     borrow_id INT,
     book_id INT,
@@ -78,8 +89,99 @@ CREATE TABLE BorrowDetails (
 
 CREATE TABLE Users (
     user_id INT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(255) NOT NULL UNIQUE,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Trigger
+-- Kiểm tra tính hợp lệ user
+DELIMITER $$
+CREATE TRIGGER trg_check_user_fields
+BEFORE INSERT ON Users
+FOR EACH ROW
+BEGIN
+    IF NEW.username IS NULL OR NEW.username = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Username không được để trống';
+    END IF;
+
+    IF NEW.email IS NULL OR NEW.email = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Email không được để trống';
+    END IF;
+
+    IF NEW.password IS NULL OR NEW.password = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Password không được để trống';
+    END IF;
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS trg_check_author_fields
+DROP TRIGGER IF EXISTS trg_check_author_fields_update
+
+DELIMITER $$
+CREATE TRIGGER trg_check_author_fields
+BEFORE INSERT ON Authors
+FOR EACH ROW
+BEGIN
+    IF NEW.name IS NULL OR NEW.name= '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Name không được để trống';
+    END IF;
+END $$
+
+CREATE TRIGGER trg_check_author_fields_update
+BEFORE UPDATE ON Authors
+FOR EACH ROW
+BEGIN
+    IF NEW.name IS NULL OR NEW.name = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Name không được để trống';
+    END IF;
+END $$
+DELIMITER ;
+
+
+
+-- Function
+-- kiểm tra user tồn tại?
+DROP FUNCTION IF EXISTS check_user_exists
+DELIMITER $$
+CREATE FUNCTION check_user_exists(field VARCHAR(255), value VARCHAR(255))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    DECLARE userExists BOOLEAN DEFAULT FALSE;
+
+    IF field = 'email' THEN	
+        SET userExists = EXISTS (SELECT 1 FROM Users WHERE email = value);
+    ELSEIF field = 'username' THEN
+        SET userExists = EXISTS (SELECT 1 FROM Users WHERE username = value);
+    END IF;
+
+    RETURN userExists;
+END$$
+DELIMITER ;
+
+-- Kiểm tra tác giả tồn tại?
+DROP FUNCTION IF EXISTS check_author_exists
+DELIMITER $$
+CREATE FUNCTION check_author_exists(field VARCHAR(255), value VARCHAR(255))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    DECLARE authorExists BOOLEAN DEFAULT FALSE;
+    
+    IF field = 'name' THEN	
+        SET authorExists = EXISTS (SELECT 1 FROM Authors WHERE name = value);
+    ELSEIF field = 'author_id' THEN
+        SET authorExists = EXISTS (SELECT 1 FROM Authors WHERE author_id = CAST(value AS UNSIGNED));
+    END IF;
+    
+    RETURN authorExists;
+END$$
+DELIMITER ;
+
