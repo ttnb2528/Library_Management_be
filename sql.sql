@@ -42,9 +42,9 @@ CREATE TABLE LibraryCards (
 
 CREATE TABLE Readers (
     reader_id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(255),
     address text,
-    card_number INT,
+    card_number INT NULL,
     FOREIGN KEY (card_number) REFERENCES LibraryCards(card_number)
 );
 
@@ -209,6 +209,31 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- Kiểm tra tính hợp lệ reader
+DROP TRIGGER IF EXISTS trg_check_reader_fields
+DROP TRIGGER IF EXISTS trg_check_reader_fields_update
+DELIMITER $$
+CREATE TRIGGER trg_check_reader_fields
+BEFORE INSERT ON Readers
+FOR EACH ROW
+BEGIN
+    IF NEW.name IS NULL OR NEW.name = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên độc giả không được để trống';
+    END IF;
+END $$
+
+CREATE TRIGGER trg_check_reader_fields_update
+BEFORE UPDATE ON Readers
+FOR EACH ROW
+BEGIN
+    IF NEW.name IS NULL OR NEW.name = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên độc giả không được để trống';
+    END IF;
+END $$
+DELIMITER ;
+
 
 -- Function
 -- kiểm tra user tồn tại?
@@ -308,3 +333,87 @@ BEGIN
     RETURN cardExists;
 END$$
 DELIMITER ;
+
+-- Kiểm tra độc giả có tồn tại không ?
+DROP FUNCTION IF EXISTS check_reader_exists
+DELIMITER $$
+CREATE FUNCTION check_reader_exists(field VARCHAR(255), value VARCHAR(255))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    DECLARE readerExists BOOLEAN DEFAULT FALSE;
+
+		IF field = 'name' THEN	
+			SET readerExists = EXISTS (SELECT 1 FROM Readers WHERE name = value);
+		ELSEIF field = 'reader_id' THEN
+			SET readerExists = EXISTS (SELECT 1 FROM Readers WHERE reader_id = value);
+		END IF;
+    
+    RETURN readerExists;
+END$$
+DELIMITER ;
+
+-- Procedure
+-- vừa tạo độc giả vừa tạo thẻ
+
+DROP PROCEDURE IF EXISTS create_reader_with_card
+DELIMITER //
+CREATE PROCEDURE create_reader_with_card(
+    IN reader_name VARCHAR(255),
+    IN reader_address VARCHAR(255),
+    IN card_start_date DATE,
+    IN card_end_date DATE
+)
+BEGIN
+    DECLARE readerId INT;
+    DECLARE cardId INT;
+
+    -- Bắt đầu transaction
+    START TRANSACTION;
+
+    -- Tạo độc giả mới
+    INSERT INTO Readers (name, address) VALUES (reader_name, reader_address);
+    SET readerId = LAST_INSERT_ID();
+
+    -- Tạo thẻ thư viện mới
+    INSERT INTO LibraryCards (start_date, end_date) VALUES (card_start_date, card_end_date);
+    SET cardId = LAST_INSERT_ID();
+
+    -- Cập nhật ID thẻ thư viện vào bảng Readers để liên kết độc giả và thẻ
+    UPDATE Readers SET card_number = cardId WHERE reader_id = readerId;
+
+    -- Commit nếu tất cả các lệnh đều thành công
+    COMMIT;
+END //
+DELIMITER ;
+
+-- Thêm độc giả rồi, thêm thẻ sau
+DROP PROCEDURE IF EXISTS AssignLibraryCardToReader
+DELIMITER //
+CREATE PROCEDURE AssignLibraryCardToReader(
+    IN readerId INT,
+    IN startDate DATE,
+    IN endDate DATE
+)
+BEGIN
+    DECLARE newCardId INT;
+
+    -- Bắt đầu transaction
+    START TRANSACTION;
+
+    -- Bước 1: Tạo thẻ thư viện mới
+    INSERT INTO LibraryCards (start_date, end_date) VALUES (startDate, endDate);
+    SET newCardId = LAST_INSERT_ID();
+
+    -- Bước 2: Liên kết thẻ với độc giả
+    UPDATE Readers SET card_number = newCardId WHERE reader_id = readerId;
+
+    -- Kiểm tra và Commit nếu thành công, Rollback nếu có lỗi
+    IF ROW_COUNT() > 0 THEN
+        COMMIT;
+    ELSE
+        ROLLBACK;
+    END IF;
+END //
+DELIMITER ;
+

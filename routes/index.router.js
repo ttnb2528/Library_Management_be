@@ -12,6 +12,7 @@ import GenresRouter from "./Genres.router.js";
 import PublisherRouter from "./Publisher.router.js";
 import EmployeeRouter from "./Employee.router.js";
 import LibraryCardRouter from "./LibraryCard.router.js";
+import ReaderRouter from "./Reader.router.js";
 
 app.use("/auth", AuthRouter);
 app.use("/author", AuthorRouter);
@@ -19,5 +20,6 @@ app.use("/genres", GenresRouter);
 app.use("/publisher", PublisherRouter);
 app.use("/employee", EmployeeRouter);
 app.use("/libraryCard", LibraryCardRouter);
+app.use("/reader", ReaderRouter);
 
 export default app;
