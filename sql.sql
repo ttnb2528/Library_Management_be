@@ -195,6 +195,20 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- Kiểm tra tính hợp lệ employee
+DROP TRIGGER IF EXISTS trg_check_employee_fields
+DELIMITER $$
+CREATE TRIGGER trg_check_employee_fields
+BEFORE INSERT ON Employees
+FOR EACH ROW
+BEGIN
+    IF NEW.full_name IS NULL OR NEW.full_name = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên nhân viên không được để trống';
+    END IF;
+END $$
+DELIMITER ;
+
 
 -- Function
 -- kiểm tra user tồn tại?
@@ -262,5 +276,20 @@ BEGIN
         SET publisherExists = EXISTS (SELECT 1 FROM Publishers WHERE publisher_name = value);
     
     RETURN publisherExists;
+END$$
+DELIMITER ;
+
+-- Kiểm tra nhân viên có chưa ?
+DROP FUNCTION IF EXISTS check_employee_exists
+DELIMITER $$
+CREATE FUNCTION check_employee_exists(value VARCHAR(255))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    DECLARE employeeExists BOOLEAN DEFAULT FALSE;
+
+        SET employeeExists = EXISTS (SELECT 1 FROM Employees WHERE full_name = value);
+    
+    RETURN employeeExists;
 END$$
 DELIMITER ;

@@ -10,10 +10,12 @@ import AuthRouter from "./Auth.router.js";
 import AuthorRouter from "./Author.router.js";
 import GenresRouter from "./Genres.router.js";
 import PublisherRouter from "./Publisher.router.js";
+import EmployeeRouter from "./Employee.router.js";
 
 app.use("/auth", AuthRouter);
 app.use("/author", AuthorRouter);
 app.use("/genres", GenresRouter);
 app.use("/publisher", PublisherRouter);
+app.use("/employee", EmployeeRouter);
 
 export default app;
