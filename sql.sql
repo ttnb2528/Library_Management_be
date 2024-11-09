@@ -293,3 +293,18 @@ BEGIN
     RETURN employeeExists;
 END$$
 DELIMITER ;
+
+-- Kiểm tra nhân viên có tồn tại không ?
+DROP FUNCTION IF EXISTS check_card_exists
+DELIMITER $$
+CREATE FUNCTION check_card_exists(value VARCHAR(255))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    DECLARE cardExists BOOLEAN DEFAULT FALSE;
+
+        SET cardExists = EXISTS (SELECT 1 FROM LibraryCards WHERE card_number = value);
+    
+    RETURN cardExists;
+END$$
+DELIMITER ;
