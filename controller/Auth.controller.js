@@ -7,36 +7,45 @@ import Auth from "../model/Auth.model.js";
 
 // Đăng ký người dùng mới
 export const registerUser = async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, role } = req.body;
 
   try {
     // Kiểm tra nếu email đã tồn tại qua model Auth
-    if (await Auth.checkEmailExists(email)) {
-      return res.json(
-        jsonGenerate(StatusCode.BAD_REQUEST, "Email đã tồn tại!")
-      );
-    }
+    // if (await Auth.checkEmailExists(email)) {
+    //   return res.json(
+    //     jsonGenerate(StatusCode.BAD_REQUEST, "Email đã tồn tại!")
+    //   );
+    // }
 
     // Kiểm tra nếu username đã tồn tại qua model Auth
-    if (await Auth.checkUsernameExists(username)) {
-      return res.json(
-        jsonGenerate(StatusCode.BAD_REQUEST, "Tên đăng nhập đã tồn tại!")
-      );
-    }
+    // if (await Auth.checkUsernameExists(username)) {
+    //   return res.json(
+    //     jsonGenerate(StatusCode.BAD_REQUEST, "Tên đăng nhập đã tồn tại!")
+    //   );
+    // }
 
     // Mã hóa mật khẩu trước khi lưu vào cơ sở dữ liệu
     // const salt = await bcrypt.genSalt(Number(process.env.SALT));
     // const hashedPassword = await bcrypt.hash(password, salt);
 
     // Tạo user qua model Auth
-    Auth.create(username, email, password, (err, result) => {
+    Auth.create(username, email, password, role, (err, result) => {
       if (err) {
         // console.error(err);
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
         // return res.send(err.sqlMessage);
       }
 
-      return res.json(jsonGenerate(StatusCode.CREATED, "Đăng ký thành công!"));
+      const status = result[1][0].status;
+      const message = result[1][0].message;
+
+      if (status === 1) {
+        // Email đã tồn tại
+        return res.json(jsonGenerate(StatusCode.BAD_REQUEST, message));
+      }
+
+      // return res.json(jsonGenerate(StatusCode.CREATED, "Đăng ký thành công!"));
+      return res.json(jsonGenerate(StatusCode.CREATED, message));
     });
   } catch (error) {
     console.error(error);
@@ -58,7 +67,7 @@ export const loginUser = async (req, res) => {
     // Kiểm tra nếu email tồn tại trong cơ sở dữ liệu
     const [rows] = await connection
       .promise()
-      .query("SELECT * FROM Users WHERE email = ?", [email]);
+      .query("SELECT * FROM TaiKhoan WHERE Email = ?", [email]);
     if (rows.length === 0) {
       return res.json(
         jsonGenerate(StatusCode.BAD_REQUEST, "Email không đúng!")
@@ -68,7 +77,7 @@ export const loginUser = async (req, res) => {
     const user = rows[0];
 
     // So sánh mật khẩu không mã hóa
-    if (password !== user.password) {
+    if (password !== user.Pass_wd) {
       return res.json(
         jsonGenerate(StatusCode.BAD_REQUEST, "Mật khẩu không đúng!")
       );
@@ -79,12 +88,13 @@ export const loginUser = async (req, res) => {
       { userId: user.user_id },
       process.env.JWT_TOKEN_SECRET
     );
-    delete user.password;
+    delete user.Pass_wd;
     return res.json(
       jsonGenerate(StatusCode.OK, "Đăng nhập thành công!", {
         user_id: user?.user_id,
-        username: user?.username,
-        email: user?.email,
+        username: user?.User_Name,
+        email: user?.Email,
+        role: user?.Role,
         token: token,
       })
     );
