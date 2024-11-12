@@ -1,38 +1,38 @@
 import connection from "../config/db.js";
 
 const Genres = {
-  create: (genre_name, callback) => {
-    connection.query(
-      "INSERT INTO Genres (genre_name) VALUES (?)",
-      [genre_name],
-      callback
-    );
+  create: (TenChuDe, callback) => {
+    const query = `
+        CALL create_chude(?, @status, @message);
+        SELECT @status AS status, @message AS message;
+    `;
+    connection.query(query, [TenChuDe], callback);
   },
 
   getAll: (callback) => {
-    connection.query("SELECT * FROM Genres", callback);
+    connection.query("SELECT * FROM chude", callback);
   },
 
-  getById: (genre_id, callback) => {
+  getById: (ChuDeID, callback) => {
     connection.query(
-      "SELECT * FROM Genres WHERE genre_id = ?",
-      [genre_id],
+      "SELECT * FROM chude WHERE ChuDeID = ?",
+      [ChuDeID],
       callback
     );
   },
 
-  update: (genre_id, genre_name, callback) => {
+  update: (ChuDeID, TenChuDe, callback) => {
     connection.query(
-      "UPDATE Genres SET genre_name = ? WHERE genre_id = ?",
-      [genre_name, genre_id],
+      "UPDATE chude SET TenChuDe = ? WHERE ChuDeID = ?",
+      [TenChuDe, ChuDeID],
       callback
     );
   },
 
-  delete: (genre_id, callback) => {
+  delete: (ChuDeID, callback) => {
     connection.query(
-      "DELETE FROM Genres WHERE genre_id = ?",
-      [genre_id],
+      "DELETE FROM chude WHERE ChuDeID = ?",
+      [ChuDeID],
       callback
     );
   },

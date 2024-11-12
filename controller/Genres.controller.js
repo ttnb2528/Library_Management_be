@@ -4,24 +4,30 @@ import Genres from "../model/Genres.model.js";
 
 // 1. Thêm thể loại mới
 export const addGenre = async (req, res) => {
-  const { genre_name } = req.body;
+  const { TenChuDe } = req.body;
 
   try {
     // Kiểm tra nếu thể loại đã tồn tại
-    if (await Genres.checkGenreExists(genre_name)) {
-      return res.json(
-        jsonGenerate(StatusCode.BAD_REQUEST, "Thể loại này đã tồn tại")
-      );
-    }
+    // if (await Genres.checkGenreExists(genre_name)) {
+    //   return res.json(
+    //     jsonGenerate(StatusCode.BAD_REQUEST, "Thể loại này đã tồn tại")
+    //   );
+    // }
 
     // Thêm thể loại mới
-    Genres.create(genre_name, (err, result) => {
+    Genres.create(TenChuDe, (err, result) => {
       if (err) {
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
       }
-      return res.json(
-        jsonGenerate(StatusCode.CREATED, "Thể loại đã được thêm thành công")
-      );
+
+      const status = result[1][0].status;
+      const message = result[1][0].message;
+
+      if (status === 1) {
+        return res.json(jsonGenerate(StatusCode.BAD_REQUEST, message));
+      }
+
+      return res.json(jsonGenerate(StatusCode.CREATED, message));
     });
   } catch (error) {
     console.error(error);
@@ -58,16 +64,12 @@ export const getGenreById = async (req, res) => {
 
       if (!genre || genre.length === 0) {
         return res.json(
-          jsonGenerate(StatusCode.NOTFOUND, "Không tìm thấy thể loại")
+          jsonGenerate(StatusCode.NOTFOUND, "Không tìm thấy chủ đề")
         );
       }
 
       return res.json(
-        jsonGenerate(
-          StatusCode.OK,
-          "Lấy thông tin thể loại thành công",
-          genre[0]
-        )
+        jsonGenerate(StatusCode.OK, "Lấy thông tin chủ đề thành công", genre[0])
       );
     });
   } catch (error) {
@@ -79,29 +81,29 @@ export const getGenreById = async (req, res) => {
 // 4. Cập nhật thông tin thể loại
 export const updateGenre = async (req, res) => {
   const { id } = req.params;
-  const { genre_name } = req.body;
+  const { TenChuDe } = req.body;
 
   try {
     // Kiểm tra nếu thể loại đã tồn tại
-    if (await Genres.checkGenreExists(genre_name)) {
+    if (await Genres.checkGenreExists(TenChuDe)) {
       return res.json(
-        jsonGenerate(StatusCode.BAD_REQUEST, "Thể loại này đã tồn tại")
+        jsonGenerate(StatusCode.BAD_REQUEST, "Chủ đề này đã tồn tại")
       );
     }
 
-    Genres.update(id, genre_name, (err, result) => {
+    Genres.update(id, TenChuDe, (err, result) => {
       if (err) {
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
       }
 
       if (result.affectedRows === 0) {
         return res.json(
-          jsonGenerate(StatusCode.NOTFOUND, "Không tìm thấy thể loại")
+          jsonGenerate(StatusCode.NOTFOUND, "Không tìm thấy chủ đề")
         );
       }
 
       return res.json(
-        jsonGenerate(StatusCode.OK, "Cập nhật thông tin thể loại thành công")
+        jsonGenerate(StatusCode.OK, "Cập nhật thông tin chủ đề thành công")
       );
     });
   } catch (error) {
