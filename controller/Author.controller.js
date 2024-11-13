@@ -5,24 +5,30 @@ import Author from "../model/Author.model.js";
 
 // 1. Thêm tác giả mới
 export const addAuthor = async (req, res) => {
-  const { name, website, notes } = req.body;
+  const { name, website, note } = req.body;
 
   try {
     // Kiểm tra nếu tác giả đã tồn tại
-    if (await Author.checkAuthorExists("name", name)) {
-      return res.json(
-        jsonGenerate(StatusCode.BAD_REQUEST, "Tác giả này đã tồn tại")
-      );
-    }
+    // if (await Author.checkAuthorExists("name", name)) {
+    //   return res.json(
+    //     jsonGenerate(StatusCode.BAD_REQUEST, "Tác giả này đã tồn tại")
+    //   );
+    // }
 
     // Thêm tác giả mới
-    Author.create(name, website, notes, (err, result) => {
+    Author.create(name, website, note, (err, result) => {
       if (err) {
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
       }
-      return res.json(
-        jsonGenerate(StatusCode.CREATED, "Tác giả đã được thêm thành công")
-      );
+
+      const status = result[1][0].status;
+      const message = result[1][0].message;
+
+      if (status === 1) {
+        return res.json(jsonGenerate(StatusCode.BAD_REQUEST, message));
+      }
+
+      return res.json(jsonGenerate(StatusCode.CREATED, message));
     });
   } catch (error) {
     console.error(error);
@@ -79,7 +85,7 @@ export const getAuthorById = async (req, res) => {
 // 4. Cập nhật thông tin tác giả
 export const updateAuthor = async (req, res) => {
   const { id } = req.params;
-  const { name, website, notes } = req.body;
+  const { name, website, note } = req.body;
 
   try {
     // Kiểm tra nếu tác giả tồn tại
@@ -91,7 +97,7 @@ export const updateAuthor = async (req, res) => {
 
     // Cập nhật thông tin tác giả
 
-    Author.update(id, name, website, notes, (err, result) => {
+    Author.update(id, name, website, note, (err, result) => {
       if (err) {
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
       }

@@ -232,6 +232,32 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- Kiểm tra tính hợp lệ của tác giả
+DROP TRIGGER IF EXISTS trg_check_author_fields
+DROP TRIGGER IF EXISTS trg_check_author_fields_update
+
+DELIMITER $$
+CREATE TRIGGER trg_check_author_fields
+BEFORE INSERT ON TacGia
+FOR EACH ROW
+BEGIN
+    IF NEW.TenTacGia IS NULL OR NEW.TenTacGia= '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên tác giả không được để trống';
+    END IF;
+END $$
+
+CREATE TRIGGER trg_check_author_fields_update
+BEFORE UPDATE ON TacGia
+FOR EACH ROW
+BEGIN
+    IF NEW.TenTacGia IS NULL OR NEW.TenTacGia = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên tác giả không được để trống';
+    END IF;
+END $$
+DELIMITER ;
+
 
 
 
@@ -284,6 +310,25 @@ BEGIN
         SET publisherExists = EXISTS (SELECT 1 FROM NXB WHERE TenNXB = value);
     
     RETURN publisherExists;
+END$$
+DELIMITER ;
+
+-- Kiểm tra tác giả tồn tại?
+DROP FUNCTION IF EXISTS check_author_exists
+DELIMITER $$
+CREATE FUNCTION check_author_exists(field VARCHAR(255), value VARCHAR(255))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    DECLARE authorExists BOOLEAN DEFAULT FALSE;
+    
+    IF field = 'name' THEN	
+        SET authorExists = EXISTS (SELECT 1 FROM TacGia WHERE TenTacGia = value);
+    ELSEIF field = 'author_id' THEN
+        SET authorExists = EXISTS (SELECT 1 FROM TacGia WHERE TacGiaID = value);
+    END IF;
+    
+    RETURN authorExists;
 END$$
 DELIMITER ;
 
@@ -436,6 +481,54 @@ nxb_label: BEGIN
     -- Trả về kết quả thành công
     SET p_status = 0;
     SET p_message = 'Tạo nhà xuất bản thành công!';
+END //
+
+DELIMITER ;
+
+-- Tạo tác giả
+DROP PROCEDURE IF EXISTS create_tacgia;
+DELIMITER //
+
+CREATE PROCEDURE create_tacgia (
+    IN p_tentacgia VARCHAR(255),
+    IN p_website VARCHAR(255),
+    IN p_note VARCHAR(255),
+    
+    OUT p_status INT,
+    OUT p_message VARCHAR(255)
+)
+tacgia_label: BEGIN
+    DECLARE max_id VARCHAR(10);
+    DECLARE new_id VARCHAR(10);
+
+    -- Kiểm tra tác giả có tồn tại hay không
+    IF EXISTS (SELECT 1 FROM TacGia WHERE TenTacGia = p_tentacgia) THEN
+        SET p_status = 1;
+        SET p_message = 'Tác giả đã tồn tại!';
+        LEAVE tacgia_label;
+    END IF;
+
+    -- Xác định mã tác giả lớn nhất hiện tại với tiền tố "TG"
+    SET max_id = (
+        SELECT MAX(TacGiaID)
+        FROM TacGia
+        WHERE TacGiaID LIKE 'TG%'
+    );
+
+    -- Tạo mã mới nếu max_id không null, ngược lại dùng mã mặc định TG01
+    IF max_id IS NOT NULL THEN
+        SET new_id = CONCAT('TG', LPAD(SUBSTRING(max_id, 3) + 1, 2, '0'));
+    ELSE
+        SET new_id = 'TG01';
+    END IF;
+
+    -- Thêm tác giả mới vào database
+    INSERT INTO TacGia (TacGiaID, TenTacGia, Website, Note)
+    VALUES (new_id, p_tentacgia, p_website, p_note);
+
+    -- Trả về kết quả thành công
+    SET p_status = 0;
+    SET p_message = 'Tạo tác giả thành công!';
 END //
 
 DELIMITER ;

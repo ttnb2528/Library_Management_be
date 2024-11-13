@@ -1,38 +1,38 @@
 import connection from "../config/db.js";
 
 const Author = {
-  create: (name, website, notes, callback) => {
-    connection.query(
-      "INSERT INTO Authors (name, website, notes) VALUES (?, ?, ?)",
-      [name, website, notes],
-      callback
-    );
+  create: (TenTacGia, Website, Note, callback) => {
+    const query = `
+        CALL create_tacgia(?, ?, ?,  @status, @message);
+        SELECT @status AS status, @message AS message;
+    `;
+    connection.query(query, [TenTacGia, Website, Note], callback);
   },
 
   getAll: (callback) => {
-    connection.query("SELECT * FROM Authors", callback);
+    connection.query("SELECT * FROM TacGia", callback);
   },
 
-  getById: (author_id, callback) => {
+  getById: (TacGiaID, callback) => {
     connection.query(
-      "SELECT * FROM Authors WHERE author_id = ?",
-      [author_id],
+      "SELECT * FROM TacGia WHERE TacGiaID = ?",
+      [TacGiaID],
       callback
     );
   },
 
-  update: (author_id, name, website, notes, callback) => {
+  update: (TacGiaID, TenTacGia, Website, Note, callback) => {
     connection.query(
-      "UPDATE Authors SET name = ?, website = ?, notes = ? WHERE author_id = ?",
-      [name, website, notes, author_id],
+      "UPDATE TacGia SET TenTacGia = ?, Website = ?, Note = ? WHERE TacGiaID = ?",
+      [TenTacGia, Website, Note, TacGiaID],
       callback
     );
   },
 
-  delete: (author_id, callback) => {
+  delete: (TacGiaID, callback) => {
     connection.query(
-      "DELETE FROM Authors WHERE author_id = ?",
-      [author_id],
+      "DELETE FROM TacGia WHERE TacGiaID = ?",
+      [TacGiaID],
       callback
     );
   },
@@ -40,10 +40,7 @@ const Author = {
   checkAuthorExists: async (field, value) => {
     const [rows] = await connection
       .promise()
-      .query("SELECT check_author_exists(?, ?) AS isExists", [
-        field,
-        value,
-      ]);
+      .query("SELECT check_author_exists(?, ?) AS isExists", [field, value]);
     return rows[0].isExists;
   },
 };
