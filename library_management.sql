@@ -258,6 +258,101 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- Kiểm tra tính hợp lệ sách
+DROP TRIGGER IF EXISTS trg_check_book_fields
+DROP TRIGGER IF EXISTS trg_check_book_fields_update
+DELIMITER $$
+CREATE TRIGGER trg_check_book_fields
+BEFORE INSERT ON Sach
+FOR EACH ROW
+BEGIN
+    IF NEW.TenSach IS NULL OR NEW.TenSach = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên sách không được để trống';
+    END IF;
+
+    IF NEW.SoTrang IS NULL OR NEW.SoTrang = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Số trang không được để trống';
+    END IF;
+
+    IF NEW.Soluong IS NULL OR NEW.Soluong = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Số lượng không được để trống';
+    END IF;
+    
+    IF NEW.MoTa IS NULL OR NEW.MoTa = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Mô tả không được để trống';
+    END IF;
+    
+    IF NEW.ChuDeID IS NULL OR NEW.ChuDeID = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Chủ đề không được để trống';
+    END IF;
+    
+    IF NEW.NXB_ID IS NULL OR NEW.NXB_ID = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Nhà xuất bản không được để trống';
+    END IF;
+    
+    IF NEW.TacGiaID IS NULL OR NEW.TacGiaID = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tác giả không được để trống';
+    END IF;
+    
+    IF NEW.NamXB IS NULL OR NEW.NamXB = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Năm xuất bản không được để trống';
+    END IF;
+END $$
+
+CREATE TRIGGER trg_check_book_fields_update
+BEFORE UPDATE ON Sach
+FOR EACH ROW
+BEGIN
+    IF NEW.TenSach IS NULL OR NEW.TenSach = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên sách không được để trống';
+    END IF;
+
+    IF NEW.SoTrang IS NULL OR NEW.SoTrang = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Số trang không được để trống';
+    END IF;
+
+    IF NEW.Soluong IS NULL OR NEW.Soluong = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Số lượng không được để trống';
+    END IF;
+    
+    IF NEW.MoTa IS NULL OR NEW.MoTa = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Mô tả không được để trống';
+    END IF;
+    
+    IF NEW.ChuDeID IS NULL OR NEW.ChuDeID = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Chủ đề không được để trống';
+    END IF;
+    
+    IF NEW.NXB_ID IS NULL OR NEW.NXB_ID = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Nhà xuất bản không được để trống';
+    END IF;
+    
+    IF NEW.TacGiaID IS NULL OR NEW.TacGiaID = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tác giả không được để trống';
+    END IF;
+    
+    IF NEW.NamXB IS NULL OR NEW.NamXB = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Năm xuất bản không được để trống';
+    END IF;
+END $$
+DELIMITER ;
+
 
 
 
@@ -329,6 +424,25 @@ BEGIN
     END IF;
     
     RETURN authorExists;
+END$$
+DELIMITER ;
+
+-- kiểm tra có sách chưa
+DROP FUNCTION IF EXISTS check_book_exists
+DELIMITER $$
+CREATE FUNCTION check_book_exists(field VARCHAR(255), value VARCHAR(255))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    DECLARE bookExists BOOLEAN DEFAULT FALSE;
+
+    IF field = 'TenSach' THEN	
+        SET bookExists = EXISTS (SELECT 1 FROM Sach WHERE TenSach = value);
+    ELSEIF field = 'ISBN' THEN
+       SET bookExists = EXISTS (SELECT 1 FROM Sach WHERE ISBN = value);
+    END IF;
+
+    RETURN bookExists;
 END$$
 DELIMITER ;
 
@@ -529,6 +643,59 @@ tacgia_label: BEGIN
     -- Trả về kết quả thành công
     SET p_status = 0;
     SET p_message = 'Tạo tác giả thành công!';
+END //
+
+DELIMITER ;
+
+-- Tạo Sách
+DROP PROCEDURE IF EXISTS create_sach;
+DELIMITER //
+
+CREATE PROCEDURE create_sach (
+    IN p_tensach VARCHAR(255),
+    IN p_sotrang INT,
+    IN p_soluong INT,
+    IN p_mota VARCHAR(255),
+    IN p_chudeid VARCHAR(255),
+    IN p_nxbid VARCHAR(255),
+    IN p_tacgiaid VARCHAR(255),
+    IN p_namxb DATE,
+    
+    OUT p_status INT,
+    OUT p_message VARCHAR(255)
+)
+sach_label: BEGIN
+    DECLARE max_id VARCHAR(10);
+    DECLARE new_id VARCHAR(10);
+
+    -- Kiểm tra sách có tồn tại hay không
+    IF EXISTS (SELECT 1 FROM Sach WHERE TenSach = p_tensach) THEN
+        SET p_status = 1;
+        SET p_message = 'Sách đã tồn tại!';
+        LEAVE sach_label;
+    END IF;
+
+    -- Xác định mã sách lớn nhất hiện tại với tiền tố "ISBN"
+    SET max_id = (
+        SELECT MAX(ISBN)
+        FROM Sach
+        WHERE ISBN LIKE 'ISBN%'
+    );
+
+    -- Tạo mã mới nếu max_id không null, ngược lại dùng mã mặc định ISBN01
+    IF max_id IS NOT NULL THEN
+        SET new_id = CONCAT('ISBN', LPAD(SUBSTRING(max_id, 5) + 1, 2, '0'));
+    ELSE
+        SET new_id = 'ISBN01';
+    END IF;
+
+    -- Thêm sách mới vào database
+    INSERT INTO Sach (ISBN, TenSach, SoTrang, Soluong, MoTa, ChuDeID, NXB_ID, TacGiaID, NamXB)
+    VALUES (new_id, p_tensach, p_sotrang, p_soluong, p_mota, p_chudeid, p_nxbid, p_tacgiaid, p_namxb);
+
+    -- Trả về kết quả thành công
+    SET p_status = 0;
+    SET p_message = 'Tạo sách thành công!';
 END //
 
 DELIMITER ;

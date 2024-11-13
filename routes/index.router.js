@@ -13,6 +13,7 @@ import PublisherRouter from "./Publisher.router.js";
 import EmployeeRouter from "./Employee.router.js";
 import LibraryCardRouter from "./LibraryCard.router.js";
 import ReaderRouter from "./Reader.router.js";
+import BookRouter from "./Book.router.js";
 
 app.use("/auth", AuthRouter);
 app.use("/author", AuthorRouter);
@@ -21,5 +22,6 @@ app.use("/publisher", PublisherRouter);
 app.use("/employee", EmployeeRouter);
 app.use("/libraryCard", LibraryCardRouter);
 app.use("/reader", ReaderRouter);
+app.use("/book", BookRouter);
 
 export default app;
