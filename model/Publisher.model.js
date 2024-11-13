@@ -1,45 +1,38 @@
 import connection from "../config/db.js";
 
 const Publisher = {
-  create: (publisher_name, address, email, representative_info, callback) => {
-    connection.query(
-      "INSERT INTO Publishers (publisher_name, address, email, representative_info) VALUES (?, ?, ?, ?)",
-      [publisher_name, address, email, representative_info],
-      callback
-    );
+  create: (TenNXB, DiaChi, Email, Info_ngDaiDien, callback) => {
+    const query = `
+        CALL create_nxb(?, ?, ?, ?, @status, @message);
+        SELECT @status AS status, @message AS message;
+    `;
+    connection.query(query, [TenNXB, DiaChi, Email, Info_ngDaiDien], callback);
   },
 
   getAll: (callback) => {
-    connection.query("SELECT * FROM Publishers", callback);
+    connection.query("SELECT * FROM NXB", callback);
   },
 
   getById: (publisher_id, callback) => {
     connection.query(
-      "SELECT * FROM Publishers WHERE publisher_id = ?",
+      "SELECT * FROM NXB WHERE NXB_ID = ?",
       [publisher_id],
       callback
     );
   },
 
-  update: (
-    publisher_id,
-    publisher_name,
-    address,
-    email,
-    representative_info,
-    callback
-  ) => {
+  update: (NXB_ID, TenNXB, DiaChi, Email, Info_ngDaiDien, callback) => {
     connection.query(
-      "UPDATE Publishers SET publisher_name = ?, address = ?, email = ?, representative_info = ? WHERE publisher_id = ?",
-      [publisher_name, address, email, representative_info, publisher_id],
+      "UPDATE NXB SET TenNXB = ?, DiaChi = ?, Email = ?, Info_ngDaiDien = ? WHERE NXB_ID = ?",
+      [TenNXB, DiaChi, Email, Info_ngDaiDien, NXB_ID],
       callback
     );
   },
 
-  delete: (publisher_id, callback) => {
+  delete: (NXB_ID, callback) => {
     connection.query(
-      "DELETE FROM Publishers WHERE publisher_id = ?",
-      [publisher_id],
+      "DELETE FROM NXB WHERE NXB_ID = ?",
+      [NXB_ID],
       callback
     );
   },
