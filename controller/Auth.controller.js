@@ -198,19 +198,33 @@ export const deleteUser = async (req, res) => {
   const { id } = req.params;
 
   try {
-    Auth.delete(id, (err, result) => {
+    Auth.getById(id, (err, user) => {
       if (err) {
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
       }
 
-      const status = result[1][0].status;
-      const message = result[1][0].message;
-
-      if (status === 1) {
-        return res.json(jsonGenerate(StatusCode.BAD_REQUEST, message));
+      if (!user || user.length === 0) {
+        return res.json(
+          jsonGenerate(StatusCode.NOTFOUND, "Không tìm thấy người dùng")
+        );
       }
 
-      return res.json(jsonGenerate(StatusCode.OK, message));
+      Auth.delete(id, (err, result) => {
+        if (err) {
+          return res.json(
+            jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage)
+          );
+        }
+
+        const status = result[1][0].status;
+        const message = result[1][0].message;
+
+        if (status === 1) {
+          return res.json(jsonGenerate(StatusCode.BAD_REQUEST, message));
+        }
+
+        return res.json(jsonGenerate(StatusCode.OK, message));
+      });
     });
   } catch (error) {
     console.error(error);

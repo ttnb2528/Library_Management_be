@@ -15,7 +15,7 @@ const Employee = {
 
   update: (NhanVienID, HoTen, NgaySinh, SDT, callback) => {
     connection.query(
-      "UPDATE Employees SET HoTen = ?, NgaySinh = ?, SDT = ? WHERE NhanVienID = ?",
+      "UPDATE NhanVien SET HoTen = ?, NgaySinh = ?, SDT = ? WHERE NhanVienID = ?",
       [HoTen, NgaySinh, SDT, NhanVienID],
       callback
     );

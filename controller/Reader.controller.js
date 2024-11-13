@@ -151,19 +151,33 @@ export const deleteReader = async (req, res) => {
   const { id } = req.params;
 
   try {
-    Reader.delete(id, (err, result) => {
+    Reader.getById(id, async (err, reader) => {
       if (err) {
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
       }
 
-      const status = result[1][0].status;
-      const message = result[1][0].message;
-
-      if (status === 1) {
-        return res.json(jsonGenerate(StatusCode.BAD_REQUEST, message));
+      if (!reader || reader.length === 0) {
+        return res.json(
+          jsonGenerate(StatusCode.NOTFOUND, "Không tìm thấy độc giả")
+        );
       }
 
-      return res.json(jsonGenerate(StatusCode.OK, message));
+      Reader.delete(id, (err, result) => {
+        if (err) {
+          return res.json(
+            jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage)
+          );
+        }
+
+        const status = result[1][0].status;
+        const message = result[1][0].message;
+
+        if (status === 1) {
+          return res.json(jsonGenerate(StatusCode.BAD_REQUEST, message));
+        }
+
+        return res.json(jsonGenerate(StatusCode.OK, message));
+      });
     });
   } catch (error) {
     console.error(error);

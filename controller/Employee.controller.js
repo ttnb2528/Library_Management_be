@@ -4,7 +4,6 @@ import Employee from "../model/Employee.model.js";
 
 // 1. Thêm nhân viên mới
 
-
 // 2. Lấy danh sách nhân viên
 export const getEmployees = async (req, res) => {
   try {
@@ -62,13 +61,36 @@ export const updateEmployee = async (req, res) => {
   const { full_name, birth_date, phone_number } = req.body;
 
   try {
-    Employee.update(id, full_name, birth_date, phone_number, (err, result) => {
+    Employee.getById(id, (err, employee) => {
       if (err) {
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
       }
 
-      return res.json(
-        jsonGenerate(StatusCode.OK, "Cập nhật thông tin nhân viên thành công")
+      if (!employee || employee.length === 0) {
+        return res.json(
+          jsonGenerate(StatusCode.NOTFOUND, "Không tìm thấy nhân viên")
+        );
+      }
+
+      Employee.update(
+        id,
+        full_name,
+        birth_date,
+        phone_number,
+        (err, result) => {
+          if (err) {
+            return res.json(
+              jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage)
+            );
+          }
+
+          return res.json(
+            jsonGenerate(
+              StatusCode.OK,
+              "Cập nhật thông tin nhân viên thành công"
+            )
+          );
+        }
       );
     });
   } catch (error) {
@@ -76,4 +98,3 @@ export const updateEmployee = async (req, res) => {
     return res.json(jsonGenerate(StatusCode.SERVER_ERROR, "Lỗi hệ thống"));
   }
 };
-
