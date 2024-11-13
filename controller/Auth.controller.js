@@ -7,8 +7,9 @@ import Auth from "../model/Auth.model.js";
 
 // Đăng ký người dùng mới
 export const registerUser = async (req, res) => {
-  const { username, email, password, role } = req.body;
+  const { username, email, password, role, SDT } = req.body;
 
+  const HoTen = username;
   try {
     // Kiểm tra nếu email đã tồn tại qua model Auth
     // if (await Auth.checkEmailExists(email)) {
@@ -29,7 +30,7 @@ export const registerUser = async (req, res) => {
     // const hashedPassword = await bcrypt.hash(password, salt);
 
     // Tạo user qua model Auth
-    Auth.create(username, email, password, role, (err, result) => {
+    Auth.create(username, email, password, role, HoTen, SDT, (err, result) => {
       if (err) {
         // console.error(err);
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
@@ -40,7 +41,6 @@ export const registerUser = async (req, res) => {
       const message = result[1][0].message;
 
       if (status === 1) {
-        // Email đã tồn tại
         return res.json(jsonGenerate(StatusCode.BAD_REQUEST, message));
       }
 
@@ -107,4 +107,113 @@ export const loginUser = async (req, res) => {
 // Đăng xuất người dùng
 export const logoutUser = async (req, res) => {
   return res.json(jsonGenerate(StatusCode.OK, "Đăng xuất thành công!"));
+};
+
+// Lấy danh sách người dùng
+export const getAllUser = async (req, res) => {
+  try {
+    Auth.getAll((err, users) => {
+      if (err) {
+        return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
+      }
+      return res.json(
+        jsonGenerate(
+          StatusCode.OK,
+          "Lấy danh sách người dùng thành công",
+          users
+        )
+      );
+    });
+  } catch (error) {
+    console.error(error);
+    return res.json(jsonGenerate(StatusCode.SERVER_ERROR, "Lỗi hệ thống"));
+  }
+};
+
+// Lấy thông tin người dùng theo id
+export const getUserById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    Auth.getById(id, (err, user) => {
+      if (err) {
+        return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
+      }
+
+      if (!user || user.length === 0) {
+        return res.json(
+          jsonGenerate(StatusCode.NOTFOUND, "Không tìm thấy người dùng")
+        );
+      }
+
+      return res.json(
+        jsonGenerate(StatusCode.OK, "Lấy thông tin người dùng thành công", user)
+      );
+    });
+  } catch (error) {
+    console.error(error);
+    return res.json(jsonGenerate(StatusCode.SERVER_ERROR, "Lỗi hệ thống"));
+  }
+};
+
+// Cập nhật thông tin người dùng
+export const updateUser = async (req, res) => {
+  const { id } = req.params;
+  const { username, password, email, role } = req.body;
+
+  try {
+    // Kiểm tra nếu người dùng có tồn tại không
+    Auth.getById(id, (err, user) => {
+      if (err) {
+        return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
+      }
+
+      if (!user || user.length === 0) {
+        // Nếu người dùng không tồn tại, trả về phản hồi và thoát
+        return res.json(
+          jsonGenerate(StatusCode.NOTFOUND, "Không tìm thấy người dùng")
+        );
+      }
+
+      // Nếu người dùng tồn tại, tiến hành cập nhật thông tin
+      Auth.update(id, username, password, email, role, (err, result) => {
+        if (err) {
+          return res.json(
+            jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage)
+          );
+        }
+
+        // Phản hồi khi cập nhật thành công
+        return res.json(jsonGenerate(StatusCode.OK, "Cập nhật thành công!"));
+      });
+    });
+  } catch (error) {
+    console.error(error);
+    return res.json(jsonGenerate(StatusCode.SERVER_ERROR, "Lỗi hệ thống"));
+  }
+};
+
+// Xóa người dùng
+export const deleteUser = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    Auth.delete(id, (err, result) => {
+      if (err) {
+        return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
+      }
+
+      const status = result[1][0].status;
+      const message = result[1][0].message;
+
+      if (status === 1) {
+        return res.json(jsonGenerate(StatusCode.BAD_REQUEST, message));
+      }
+
+      return res.json(jsonGenerate(StatusCode.OK, message));
+    });
+  } catch (error) {
+    console.error(error);
+    return res.json(jsonGenerate(StatusCode.SERVER_ERROR, "Lỗi hệ thống"));
+  }
 };

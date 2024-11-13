@@ -1,38 +1,22 @@
 import connection from "../config/db.js";
 
 const Employee = {
-  create: (full_name, birth_date, phone_number, callback) => {
-    connection.query(
-      "INSERT INTO Employees (full_name, birth_date, phone_number) VALUES (?, ?, ?)",
-      [full_name, birth_date, phone_number],
-      callback
-    );
-  },
-
   getAll: (callback) => {
-    connection.query("SELECT * FROM Employees", callback);
+    connection.query("SELECT * FROM NhanVien", callback);
   },
 
-  getById: (employee_id, callback) => {
+  getById: (NhanVienID, callback) => {
     connection.query(
-      "SELECT * FROM Employees WHERE employee_id = ?",
-      [employee_id],
+      "SELECT * FROM NhanVien WHERE NhanVienID = ?",
+      [NhanVienID],
       callback
     );
   },
 
-  update: (employee_id, full_name, birth_date, phone_number, callback) => {
+  update: (NhanVienID, HoTen, NgaySinh, SDT, callback) => {
     connection.query(
-      "UPDATE Employees SET full_name = ?, birth_date = ?, phone_number = ? WHERE employee_id = ?",
-      [full_name, birth_date, phone_number, employee_id],
-      callback
-    );
-  },
-
-  delete: (employee_id, callback) => {
-    connection.query(
-      "DELETE FROM Employees WHERE employee_id = ?",
-      [employee_id],
+      "UPDATE Employees SET HoTen = ?, NgaySinh = ?, SDT = ? WHERE NhanVienID = ?",
+      [HoTen, NgaySinh, SDT, NhanVienID],
       callback
     );
   },
@@ -44,6 +28,5 @@ const Employee = {
     return rows[0].isExists;
   },
 };
-
 
 export default Employee;

@@ -3,24 +3,7 @@ import { jsonGenerate } from "../utils/helpers.js";
 import Employee from "../model/Employee.model.js";
 
 // 1. Thêm nhân viên mới
-export const addEmployee = async (req, res) => {
-  const { full_name, birth_date, phone_number } = req.body;
 
-  try {
-    // Thêm nhân viên mới
-    Employee.create(full_name, birth_date, phone_number, (err, result) => {
-      if (err) {
-        return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
-      }
-      return res.json(
-        jsonGenerate(StatusCode.CREATED, "Nhân viên đã được thêm thành công")
-      );
-    });
-  } catch (error) {
-    console.error(error);
-    return res.json(jsonGenerate(StatusCode.SERVER_ERROR, "Lỗi hệ thống"));
-  }
-};
 
 // 2. Lấy danh sách nhân viên
 export const getEmployees = async (req, res) => {
@@ -94,20 +77,3 @@ export const updateEmployee = async (req, res) => {
   }
 };
 
-// 5. Xóa nhân viên
-export const deleteEmployee = async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    Employee.delete(id, (err, result) => {
-      if (err) {
-        return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
-      }
-
-      return res.json(jsonGenerate(StatusCode.OK, "Xóa nhân viên thành công"));
-    });
-  } catch (error) {
-    console.error(error);
-    return res.json(jsonGenerate(StatusCode.SERVER_ERROR, "Lỗi hệ thống"));
-  }
-};
