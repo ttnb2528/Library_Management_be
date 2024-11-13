@@ -424,7 +424,7 @@ nxb_label: BEGIN
 
     -- Tạo mã mới nếu max_id không null, ngược lại dùng mã mặc định NXB01
     IF max_id IS NOT NULL THEN
-        SET new_id = CONCAT('NXB', LPAD(SUBSTRING(max_id, 3) + 1, 2, '0'));
+        SET new_id = CONCAT('NXB', LPAD(SUBSTRING(max_id, 4) + 1, 2, '0'));
     ELSE
         SET new_id = 'NXB01';
     END IF;
