@@ -378,6 +378,41 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- Tính hợp lệ nhân viên
+DROP TRIGGER IF EXISTS trg_check_employee_fields
+DROP TRIGGER IF EXISTS trg_check_employee_fields_update
+DELIMITER $$
+CREATE TRIGGER trg_check_employee_fields
+BEFORE INSERT ON NhanVien
+FOR EACH ROW
+BEGIN
+    IF NEW.HoTen IS NULL OR NEW.HoTen = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên nhân viên không được để trống';
+    END IF;
+    
+    IF NEW.SDT IS NULL OR NEW.SDT = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Số điện thoại không được để trống';
+    END IF;
+END $$
+
+CREATE TRIGGER trg_check_employee_fields_update
+BEFORE UPDATE ON NhanVien
+FOR EACH ROW
+BEGIN
+    IF NEW.HoTen IS NULL OR NEW.HoTen = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên nhân viên không được để trống';
+    END IF;
+    
+    IF NEW.SDT IS NULL OR NEW.SDT = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Số điện thoại không được để trống';
+    END IF;
+END $$
+DELIMITER ;
+
 
 
 
@@ -520,18 +555,21 @@ CREATE PROCEDURE create_account (
     IN p_email VARCHAR(100),
     IN p_password VARCHAR(100),
     IN p_role VARCHAR(20),
+    IN p_full_name VARCHAR(255),
+    IN p_phone_number VARCHAR(20),
     OUT p_status INT,
     OUT p_message VARCHAR(255)
 )
 account_label: BEGIN -- Đặt nhãn cho BEGIN...END
     DECLARE max_id VARCHAR(10);
     DECLARE new_id VARCHAR(10);
+    DECLARE new_nv_id VARCHAR(50); -- Khai báo biến new_nv_id ngoài IF
 
     -- Kiểm tra email có tồn tại hay không
     IF EXISTS (SELECT 1 FROM TaiKhoan WHERE Email = p_email) THEN
         SET p_status = 1;
         SET p_message = 'Email đã tồn tại!';
-        LEAVE account_label; -- Thoát khỏi thủ tục bằng cách dùng nhãn
+        LEAVE account_label; -- Thoát khỏi thủ tục nếu email đã tồn tại
     END IF;
 
     -- Xác định tiền tố (prefix) dựa trên role
@@ -553,16 +591,39 @@ account_label: BEGIN -- Đặt nhãn cho BEGIN...END
         SET new_id = CONCAT(CASE WHEN p_role = 'Admin' THEN 'AD' ELSE 'NV' END, '01');
     END IF;
 
-    -- Thêm tài khoản mới vào database
-    INSERT INTO TaiKhoan (ID_TaiKhoan, User_Name, Pass_wd, Email, Role)
-    VALUES (new_id, p_username, p_password, p_email, p_role);
+    -- Nếu role là 'Admin', chỉ tạo tài khoản
+    IF p_role = 'Admin' THEN
+        -- Thêm tài khoản mới vào database
+        INSERT INTO TaiKhoan (ID_TaiKhoan, User_Name, Pass_wd, Email, Role)
+        VALUES (new_id, p_username, p_password, p_email, p_role);
+        SET p_status = 0;
+        SET p_message = 'Đăng ký tài khoản Admin thành công!';
+        LEAVE account_label;
+    END IF;
 
-    -- Trả về kết quả thành công
-    SET p_status = 0;
-    SET p_message = 'Đăng ký thành công!';
+    -- Nếu role là 'NhanVien', vừa tạo tài khoản vừa thêm thông tin nhân viên
+    IF p_role = 'NhanVien' THEN
+        -- Thêm tài khoản mới vào database
+        INSERT INTO TaiKhoan (ID_TaiKhoan, User_Name, Pass_wd, Email, Role)
+        VALUES (new_id, p_username, p_password, p_email, p_role);
+
+        -- Tạo mã nhân viên
+        SET new_nv_id = CONCAT('NV', LPAD(SUBSTRING(new_id, 3) + 1, 2, '0'));
+
+        -- Thêm thông tin nhân viên vào bảng NhanVien
+        INSERT INTO NhanVien (NhanVienID, HoTen, SDT, ID_TaiKhoan)
+        VALUES (new_nv_id, p_full_name, p_phone_number, new_id); -- Các trường khác như HoTen, NgaySinh, SDT có thể được cập nhật sau
+
+        SET p_status = 0;
+        SET p_message = 'Đăng ký tài khoản và nhân viên thành công!';
+    END IF;
+
 END //
 
 DELIMITER ;
+
+
+
 
 -- Tạo chủ đề
 DROP PROCEDURE IF EXISTS create_chude;
@@ -900,10 +961,38 @@ END //
 
 DELIMITER ;
 
+-- Xóa nhân viên và tài khoản
+DROP PROCEDURE IF EXISTS delete_employee_with_account;
+DELIMITER //
 
+CREATE PROCEDURE delete_employee_with_account(
+    IN account_id VARCHAR(10),
+    OUT p_status INT,
+    OUT p_message VARCHAR(255)
+)
+BEGIN
+    -- Xử lý lỗi: nếu có lỗi, rollback và gán thông báo lỗi
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_status = 1;
+        SET p_message = 'Đã xảy ra lỗi khi xóa nhân viên và tài khoản!';
+    END;
 
+    -- Bắt đầu transaction
+    START TRANSACTION;
 
+    -- Xóa nhân viên bảng NhanVien trước khi xóa tài khoản
+    DELETE FROM NhanVien WHERE ID_TaiKhoan = account_id;
+    -- Xóa tài khoản khỏi bảng TaiKhoan
+    DELETE FROM TaiKhoan WHERE ID_TaiKhoan = account_id;
 
+    -- Commit nếu không có lỗi
+    COMMIT;
 
+    -- Trả về kết quả thành công
+    SET p_status = 0;
+    SET p_message = 'Xóa nhân viên và tài khoản thành công!';
+END //
 
-
+DELIMITER ;
