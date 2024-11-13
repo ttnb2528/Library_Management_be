@@ -68,7 +68,7 @@ CREATE TABLE DocGia (
     DiaChi VARCHAR(500),
     SDT VARCHAR(20),
     SoThe VARCHAR(255),
-    FOREIGN KEY (SoThe) REFERENCES TheThuVien(SoThe)
+    FOREIGN KEY (SoThe) REFERENCES TheThuVien(SoThe) ON DELETE CASCADE
 );
 
 -- Bang TaiKhoan
@@ -353,6 +353,31 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- Kiểm tra tính hợp lệ độc giả
+DROP TRIGGER IF EXISTS trg_check_reader_fields
+DROP TRIGGER IF EXISTS trg_check_reader_fields_update
+DELIMITER $$
+CREATE TRIGGER trg_check_reader_fields
+BEFORE INSERT ON DocGia
+FOR EACH ROW
+BEGIN
+    IF NEW.TenDocGia IS NULL OR NEW.TenDocGia = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên độc giả không được để trống';
+    END IF;
+END $$
+
+CREATE TRIGGER trg_check_reader_fields_update
+BEFORE UPDATE ON DocGia
+FOR EACH ROW
+BEGIN
+    IF NEW.TenDocGia IS NULL OR NEW.TenDocGia = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tên độc giả không được để trống';
+    END IF;
+END $$
+DELIMITER ;
+
 
 
 
@@ -443,6 +468,40 @@ BEGIN
     END IF;
 
     RETURN bookExists;
+END$$
+DELIMITER ;
+
+-- Kiểm tra thẻ thư viện có tồn tại không ?
+DROP FUNCTION IF EXISTS check_card_exists
+DELIMITER $$
+CREATE FUNCTION check_card_exists(value VARCHAR(255))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    DECLARE cardExists BOOLEAN DEFAULT FALSE;
+
+        SET cardExists = EXISTS (SELECT 1 FROM TheThuVien WHERE SoThe = value);
+    
+    RETURN cardExists;
+END$$
+DELIMITER ;
+
+-- Kiểm tra độc giả có tồn tại không ?
+DROP FUNCTION IF EXISTS check_reader_exists
+DELIMITER $$
+CREATE FUNCTION check_reader_exists(field VARCHAR(255), value VARCHAR(255))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    DECLARE readerExists BOOLEAN DEFAULT FALSE;
+
+		IF field = 'name' THEN	
+			SET readerExists = EXISTS (SELECT 1 FROM DocGia WHERE TenDocGia = value);
+		ELSEIF field = 'reader_id' THEN
+			SET readerExists = EXISTS (SELECT 1 FROM DocGia WHERE DocGiaID = value);
+		END IF;
+    
+    RETURN readerExists;
 END$$
 DELIMITER ;
 
@@ -699,5 +758,152 @@ sach_label: BEGIN
 END //
 
 DELIMITER ;
+
+
+-- tạo đọc giả và thẻ
+DROP PROCEDURE IF EXISTS create_reader_with_card;
+DELIMITER //
+
+CREATE PROCEDURE create_reader_with_card(
+    IN reader_name VARCHAR(255),
+    IN reader_address VARCHAR(255),
+    IN reader_phone VARCHAR(20),
+    IN card_start_date DATE,
+    IN card_end_date DATE,
+    IN card_note VARCHAR(1000),
+    OUT p_status INT,
+    OUT p_message VARCHAR(255)
+)
+create_reader_with_card_label: BEGIN
+    DECLARE max_reader_id VARCHAR(10);
+    DECLARE new_reader_id VARCHAR(10);
+    DECLARE max_card_id VARCHAR(10);
+    DECLARE new_card_id VARCHAR(10);
+
+    -- Xử lý lỗi: nếu có lỗi, rollback và gán thông báo lỗi
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION 
+    BEGIN
+        ROLLBACK;
+        SET p_status = 1;
+        SET p_message = 'Đã xảy ra lỗi khi tạo độc giả hoặc thẻ thư viện!';
+    END;
+
+    -- Bắt đầu transaction
+    START TRANSACTION;
+
+    -- Kiểm tra xem độc giả với tên này đã tồn tại chưa
+    IF EXISTS (
+        SELECT 1 
+        FROM DocGia 
+        WHERE TenDocGia = reader_name
+    ) THEN
+        SET p_status = 1;
+        SET p_message = 'Độc giả đã tồn tại!';
+        ROLLBACK;
+        -- Kết thúc thủ tục nếu đã tồn tại độc giả
+        LEAVE create_reader_with_card_label;
+    END IF;
+
+    -- Kiểm tra xem mã thẻ thư viện đã tồn tại chưa
+    IF EXISTS (
+        SELECT 1 
+        FROM TheThuVien 
+        WHERE SoThe = new_card_id
+    ) THEN
+        SET p_status = 1;
+        SET p_message = 'Thẻ thư viện đã tồn tại!';
+        ROLLBACK;
+        -- Kết thúc thủ tục nếu đã tồn tại thẻ thư viện
+        LEAVE create_reader_with_card_label;
+    END IF;
+
+    -- Xác định mã độc giả lớn nhất hiện tại với tiền tố "DG"
+    SET max_reader_id = (
+    SELECT MAX(DocGiaID)
+    FROM DocGia
+    WHERE DocGiaID LIKE 'DG%'
+);
+
+-- Tạo mã độc giả mới nếu max_reader_id không null, ngược lại dùng mã mặc định DG01
+IF max_reader_id IS NOT NULL THEN
+    SET new_reader_id = CONCAT('DG', LPAD(CAST(SUBSTRING(max_reader_id, 3) AS UNSIGNED) + 1, 2, '0'));
+ELSE
+    SET new_reader_id = 'DG01';
+END IF;
+
+-- Xác định mã thẻ thư viện lớn nhất hiện tại với tiền tố "ST"
+SET max_card_id = (
+    SELECT MAX(SoThe)
+    FROM TheThuVien
+    WHERE SoThe LIKE 'ST%'
+);
+
+-- Tạo mã thẻ thư viện mới nếu max_card_id không null, ngược lại dùng mã mặc định ST01
+IF max_card_id IS NOT NULL THEN
+    SET new_card_id = CONCAT('ST', LPAD(CAST(SUBSTRING(max_card_id, 3) AS UNSIGNED) + 1, 2, '0'));
+ELSE
+    SET new_card_id = 'ST01';
+END IF;
+
+    -- Thêm thẻ thư viện mới vào bảng TheThuVien
+    INSERT INTO TheThuVien (SoThe, Start_date, End_date, Note)
+    VALUES (new_card_id, card_start_date, card_end_date, card_note);
+
+    -- Thêm độc giả mới vào bảng DocGia và liên kết với mã thẻ thư viện
+    INSERT INTO DocGia (DocGiaID, TenDocGia, DiaChi, SDT, SoThe)
+    VALUES (new_reader_id, reader_name, reader_address, reader_phone, new_card_id);
+
+    -- Commit nếu tất cả các lệnh đều thành công
+    COMMIT;
+
+    -- Trả về kết quả thành công
+    SET p_status = 0;
+    SET p_message = 'Tạo độc giả và thẻ thư viện thành công!';
+END //
+
+DELIMITER ;
+
+-- Xóa độc giả và thẻ
+DROP PROCEDURE IF EXISTS delete_reader_with_card;
+DELIMITER //
+
+CREATE PROCEDURE delete_reader_with_card(
+    IN reader_id VARCHAR(10),
+    OUT p_status INT,
+    OUT p_message VARCHAR(255)
+)
+BEGIN
+    -- Xử lý lỗi: nếu có lỗi, rollback và gán thông báo lỗi
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_status = 1;
+        SET p_message = 'Đã xảy ra lỗi khi xóa độc giả và thẻ thư viện!';
+    END;
+
+    -- Bắt đầu transaction
+    START TRANSACTION;
+
+    -- Xóa thẻ thư viện khỏi bảng TheThuVien trước khi xóa độc giả
+    DELETE FROM TheThuVien WHERE SoThe = (SELECT SoThe FROM DocGia WHERE DocGiaID = reader_id LIMIT 1);
+
+    -- Xóa độc giả khỏi bảng DocGia
+    DELETE FROM DocGia WHERE DocGiaID = reader_id;
+
+    -- Commit nếu không có lỗi
+    COMMIT;
+
+    -- Trả về kết quả thành công
+    SET p_status = 0;
+    SET p_message = 'Xóa độc giả và thẻ thư viện thành công!';
+END //
+
+DELIMITER ;
+
+
+
+
+
+
 
 

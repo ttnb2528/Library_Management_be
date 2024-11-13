@@ -10,49 +10,50 @@ const Reader = {
   },
 
   //   vừa thêm độc giả mới vừa thêm thẻ thư viện
-  createReaderWithCard: (name, address, start_date, end_date, callback) => {
+  createReaderWithCard: (
+    TenDocGia,
+    DiaChi,
+    SDT,
+    start_date,
+    end_date,
+    note,
+    callback
+  ) => {
+    const query = `
+        CALL create_reader_with_card(?, ?, ?, ?, ?, ?, @status, @message);
+        SELECT @status AS status, @message AS message;
+    `;
     connection.query(
-      "CALL create_reader_with_card(?, ?, ?, ?)",
-      [name, address, start_date, end_date],
-      callback
-    );
-  },
-
-  //   gán thẻ thư viện cho độc giả đã tồn tại
-  assignLibraryCard: (readerId, start_date, end_date, callback) => {
-    connection.query(
-      "CALL AssignLibraryCardToReader(?, ?, ?)",
-      [readerId, start_date, end_date],
+      query,
+      [TenDocGia, DiaChi, SDT, start_date, end_date, note],
       callback
     );
   },
 
   getAll: (callback) => {
-    connection.query("SELECT * FROM Readers", callback);
+    connection.query("SELECT * FROM DocGia", callback);
   },
 
-  getById: (reader_id, callback) => {
+  getById: (DocGiaID, callback) => {
     connection.query(
-      "SELECT * FROM Readers WHERE reader_id = ?",
-      [reader_id],
+      "SELECT * FROM DocGia WHERE DocGiaID = ?",
+      [DocGiaID],
       callback
     );
   },
 
-  update: (reader_id, name, address, callback) => {
+  update: (DocGiaID, TenDocGia, DiaChi, SDT, callback) => {
     connection.query(
-      "UPDATE Readers SET name = ?, address = ? WHERE reader_id = ?",
-      [name, address, reader_id],
+      "UPDATE DocGia SET TenDocGia = ?, DiaChi = ?, SDT = ? WHERE DocGiaID = ?",
+      [TenDocGia, DiaChi, SDT, DocGiaID],
       callback
     );
   },
 
-  delete: (reader_id, callback) => {
-    connection.query(
-      "DELETE FROM Readers WHERE reader_id = ?",
-      [reader_id],
-      callback
-    );
+  delete: (DocGiaID, callback) => {
+    const query = `call delete_reader_with_card(?, @status, @message);
+    SELECT @status AS status, @message AS message;`;
+    connection.query(query, [DocGiaID], callback);
   },
 
   checkReaderExists: async (field, value) => {

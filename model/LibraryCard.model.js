@@ -3,36 +3,36 @@ import connection from "../config/db.js";
 const LibraryCard = {
   create: (start_date, end_date, callback) => {
     connection.query(
-      "INSERT INTO LibraryCards ( start_date, end_date) VALUES (?, ?)",
+      "INSERT INTO TheThuVien ( start_date, end_date) VALUES (?, ?)",
       [start_date, end_date],
       callback
     );
   },
 
   getAll: (callback) => {
-    connection.query("SELECT * FROM LibraryCards", callback);
+    connection.query("SELECT * FROM TheThuVien", callback);
   },
 
-  getById: (card_number, callback) => {
+  getById: (SoThe, callback) => {
     connection.query(
-      "SELECT * FROM LibraryCards WHERE card_number = ?",
-      [card_number],
+      "SELECT * FROM TheThuVien WHERE SoThe = ?",
+      [SoThe],
       callback
     );
   },
 
-  update: (card_number, start_date, end_date, callback) => {
+  update: (SoThe, start_date, end_date, callback) => {
     connection.query(
-      "UPDATE LibraryCards SET start_date = ?, end_date = ? WHERE card_number = ?",
-      [start_date, end_date, card_number],
+      "UPDATE TheThuVien SET start_date = ?, end_date = ? WHERE SoThe = ?",
+      [start_date, end_date, SoThe],
       callback
     );
   },
 
-  delete: (card_number, callback) => {
+  delete: (SoThe, callback) => {
     connection.query(
-      "DELETE FROM LibraryCards WHERE card_number = ?",
-      [card_number],
+      "DELETE FROM TheThuVien WHERE SoThe = ?",
+      [SoThe],
       callback
     );
   },

@@ -4,7 +4,7 @@ import Reader from "../model/Reader.model.js";
 
 // 1. Thêm độc giả mới và thêm thẻ thư viện
 export const addReaderWithLibraryCard = async (req, res) => {
-  let { name, address, start_date, end_date } = req.body;
+  let { name, address, phone, start_date, end_date, note } = req.body;
 
   // Nếu start_date không có thì mặc định lấy ngày hiện tại
   if (!start_date) {
@@ -33,27 +33,36 @@ export const addReaderWithLibraryCard = async (req, res) => {
 
   try {
     // Kiểm tra nếu độc giả đã tồn tại
-    if (await Reader.checkReaderExists("name", name)) {
-      return res.json(
-        jsonGenerate(StatusCode.BAD_REQUEST, "Độc giả này đã tồn tại")
-      );
-    }
+    // if (await Reader.checkReaderExists("name", name)) {
+    //   return res.json(
+    //     jsonGenerate(StatusCode.BAD_REQUEST, "Độc giả này đã tồn tại")
+    //   );
+    // }
 
     // Thêm độc giả mới
     Reader.createReaderWithCard(
       name,
       address,
+      phone,
       start_date,
       end_date,
+      note,
       (err, result) => {
         if (err) {
           return res.json(
             jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage)
           );
         }
-        return res.json(
-          jsonGenerate(StatusCode.CREATED, "Độc giả đã được thêm thành công")
-        );
+
+        const status = result[1][0].status;
+        const message = result[1][0].message;
+
+        if (status === 1) {
+          return res.json(jsonGenerate(StatusCode.BAD_REQUEST, message));
+        }
+
+        return res.json(jsonGenerate(StatusCode.CREATED, message));
+        // console.log(result);
       }
     );
   } catch (error) {
@@ -111,7 +120,7 @@ export const getReaderById = async (req, res) => {
 // 4. Cập nhật thông tin độc giả
 export const updateReader = async (req, res) => {
   const { id } = req.params;
-  const { name, address } = req.body;
+  const { name, address, phone } = req.body;
 
   try {
     // Kiểm tra nếu độc giả tồn tại
@@ -120,7 +129,7 @@ export const updateReader = async (req, res) => {
         jsonGenerate(StatusCode.NOTFOUND, "Không tìm thấy độc giả")
       );
     }
-    Reader.update(id, name, address, (err, result) => {
+    Reader.update(id, name, address, phone, (err, result) => {
       if (err) {
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
       }
@@ -146,97 +155,15 @@ export const deleteReader = async (req, res) => {
       if (err) {
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
       }
-      return res.json(jsonGenerate(StatusCode.OK, "Xóa độc giả thành công"));
-    });
-  } catch (error) {
-    console.error(error);
-    return res.json(jsonGenerate(StatusCode.SERVER_ERROR, "Lỗi hệ thống"));
-  }
-};
 
-// 6. Gán thẻ thư viện cho độc giả đã tồn tại
-export const assignLibraryCard = async (req, res) => {
-  const { readerId } = req.params;
-  let { start_date, end_date } = req.body;
+      const status = result[1][0].status;
+      const message = result[1][0].message;
 
-  // Nếu start_date không có thì mặc định lấy ngày hiện tại
-  if (!start_date) {
-    start_date = new Date();
-  } else {
-    start_date = new Date(start_date);
-  }
-
-  // Nếu end_date không có, mặc định là 1 năm sau ngày start_date
-  if (!end_date) {
-    end_date = new Date(start_date);
-    end_date.setFullYear(end_date.getFullYear() + 1);
-  } else {
-    end_date = new Date(end_date);
-  }
-
-  // Kiểm tra nếu end_date phải lớn hơn start_date
-  if (end_date <= start_date) {
-    return res.json(
-      jsonGenerate(
-        StatusCode.BAD_REQUEST,
-        "Ngày kết thúc phải lớn hơn ngày bắt đầu"
-      )
-    );
-  }
-
-  try {
-    // Kiểm tra nếu độc giả tồn tại
-    if (!(await Reader.checkReaderExists("reader_id", readerId))) {
-      return res.json(
-        jsonGenerate(StatusCode.NOTFOUND, "Không tìm thấy độc giả")
-      );
-    }
-
-    // Kiểm tra nếu end_date phải lớn hơn start_date
-    if (end_date <= start_date) {
-      return res.json(
-        jsonGenerate(
-          StatusCode.BAD_REQUEST,
-          "Ngày kết thúc phải lớn hơn ngày bắt đầu"
-        )
-      );
-    }
-
-    // Gán thẻ thư viện cho độc giả
-    Reader.assignLibraryCard(readerId, start_date, end_date, (err, result) => {
-      if (err) {
-        return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
+      if (status === 1) {
+        return res.json(jsonGenerate(StatusCode.BAD_REQUEST, message));
       }
-      return res.json(
-        jsonGenerate(StatusCode.OK, "Gán thẻ thư viện cho độc giả thành công")
-      );
-    });
-  } catch (error) {
-    console.error(error);
-    return res.json(jsonGenerate(StatusCode.SERVER_ERROR, "Lỗi hệ thống"));
-  }
-};
 
-// 7. Thêm độc giả mới
-export const addReader = async (req, res) => {
-  const { name, address } = req.body;
-
-  try {
-    // Kiểm tra nếu độc giả đã tồn tại
-    if (await Reader.checkReaderExists("name", name)) {
-      return res.json(
-        jsonGenerate(StatusCode.BAD_REQUEST, "Độc giả này đã tồn tại")
-      );
-    }
-
-    // Thêm độc giả mới
-    Reader.create(name, address, (err, result) => {
-      if (err) {
-        return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
-      }
-      return res.json(
-        jsonGenerate(StatusCode.CREATED, "Độc giả đã được thêm thành công")
-      );
+      return res.json(jsonGenerate(StatusCode.OK, message));
     });
   } catch (error) {
     console.error(error);
