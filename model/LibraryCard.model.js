@@ -14,6 +14,8 @@ const LibraryCard = {
   },
 
   getById: (SoThe, callback) => {
+    console.log(SoThe);
+    
     connection.query(
       "SELECT * FROM TheThuVien WHERE SoThe = ?",
       [SoThe],

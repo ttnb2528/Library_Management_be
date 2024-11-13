@@ -1,18 +1,18 @@
 import express from "express";
 import {
-  addLibraryCard,
+  // addLibraryCard,
   getLibraryCards,
   getLibraryCardById,
   updateLibraryCard,
-  deleteLibraryCard,
+  // deleteLibraryCard,
 } from "../controller/LibraryCard.controller.js";
 
 const router = express.Router();
 
-router.post("/add", addLibraryCard);
+// router.post("/add", addLibraryCard);
 router.get("/get", getLibraryCards);
-router.get("/get/:card_number", getLibraryCardById);
-router.put("/update/:card_number", updateLibraryCard);
-router.delete("/delete/:card_number", deleteLibraryCard);
+router.get("/get/:id", getLibraryCardById);
+router.put("/update/:id", updateLibraryCard);
+// router.delete("/delete/:id", deleteLibraryCard);
 
 export default router;
