@@ -112,17 +112,15 @@ CREATE TABLE PhieuMuon (
 
 -- Bảng PhieuMuonChiTiet
 CREATE TABLE PhieuMuonChiTiet (
-    PhieuMuonID VARCHAR(50) PRIMARY KEY,
+    PhieuMuonID VARCHAR(50),
     ISBN VARCHAR(50),
     NgayTra DATE,
-    DaTra Boolean,
+    DaTra BOOLEAN,
     Note VARCHAR(1000),
+    PRIMARY KEY (PhieuMuonID, ISBN), -- Khóa chính là cặp (PhieuMuonID, ISBN)
     FOREIGN KEY (PhieuMuonID) REFERENCES PhieuMuon(PhieuMuonID),
     FOREIGN KEY (ISBN) REFERENCES Sach(ISBN)
-);
-
-
-
+)
 
 
 
@@ -413,6 +411,75 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- Kiểm tra tính hợp lệ phiếu mượn
+DROP TRIGGER IF EXISTS trg_check_phieu_muon_fields
+DROP TRIGGER IF EXISTS trg_check_phieu_muon_fields_update
+DELIMITER $$
+CREATE TRIGGER trg_check_phieu_muon_fields
+BEFORE INSERT ON PhieuMuon
+FOR EACH ROW
+BEGIN
+    IF NEW.NhanVienID IS NULL OR NEW.NhanVienID = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Mã nhân viên không được để trống';
+    END IF;
+    
+    IF NEW.SoThe IS NULL OR NEW.SoThe = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Số thẻ không được để trống';
+    END IF;
+    
+    -- IF NEW.NgayMuon IS NULL OR NEW.NgayMuon = '' THEN
+--         SIGNAL SQLSTATE '45000'
+--         SET MESSAGE_TEXT = 'Ngày mượn không được để trống';
+--     END IF;
+END $$
+
+CREATE TRIGGER trg_check_phieu_muon_fields_update
+BEFORE UPDATE ON PhieuMuon
+FOR EACH ROW
+BEGIN
+    IF NEW.NhanVienID IS NULL OR NEW.NhanVienID = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Mã nhân viên không được để trống';
+    END IF;
+    
+    IF NEW.SoThe IS NULL OR NEW.SoThe = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Số thẻ không được để trống';
+    END IF;
+    
+    -- IF NEW.NgayMuon IS NULL OR NEW.NgayMuon = '' THEN
+--         SIGNAL SQLSTATE '45000'
+--         SET MESSAGE_TEXT = 'Ngày mượn không được để trống';
+--     END IF;
+END $$
+DELIMITER ;
+
+-- Kiểm tra tính hợp lệ chi tiết phiếu mượn
+DROP TRIGGER IF EXISTS trg_check_ct_phieu_muon_fields
+DROP TRIGGER IF EXISTS trg_check_ct_phieu_muon_fields_update
+DELIMITER $$
+CREATE TRIGGER trg_check_ct_phieu_muon_fields
+BEFORE INSERT ON PhieuMuonChiTiet
+FOR EACH ROW
+BEGIN
+    IF NEW.ISBN IS NULL OR NEW.ISBN = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Mã sách không được để trống';
+    END IF;
+END $$
+
+CREATE TRIGGER trg_check_ct_phieu_muon_fields_update
+BEFORE UPDATE ON PhieuMuonChiTiet
+FOR EACH ROW
+BEGIN
+    IF NEW.ISBN IS NULL OR NEW.ISBN = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Mã sách không được để trống';
+    END IF;
+END $$
+DELIMITER ;
 
 
 
@@ -996,3 +1063,115 @@ BEGIN
 END //
 
 DELIMITER ;
+
+-- Tạo Phiếu mượn
+DROP PROCEDURE IF EXISTS create_loan_with_details;
+DELIMITER //
+
+CREATE PROCEDURE create_loan_with_details(
+    IN staff_id VARCHAR(50),
+    IN card_id VARCHAR(50),
+    IN loan_date DATE,
+    IN book_isbns TEXT, -- Danh sách ISBN của sách được mượn (dùng ',' để ngăn cách)
+    OUT p_status INT,
+    OUT p_message VARCHAR(255)
+)
+BEGIN
+    DECLARE max_loan_id VARCHAR(10);
+    DECLARE new_loan_id VARCHAR(10);
+    DECLARE isbn_value VARCHAR(50);
+    DECLARE pos INT DEFAULT 1;
+    DECLARE isbn_count INT;
+    DECLARE clean_isbns TEXT;
+
+    -- Xử lý lỗi: nếu có lỗi, rollback và gán thông báo lỗi
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION 
+    BEGIN
+        ROLLBACK;
+        SET p_status = 1;
+        SET p_message = 'Đã xảy ra lỗi khi tạo phiếu mượn hoặc chi tiết phiếu mượn!';
+    END;
+
+    -- Bắt đầu transaction
+    START TRANSACTION;
+
+    -- Xác định mã phiếu mượn lớn nhất hiện tại với tiền tố "PM"
+    SET max_loan_id = (
+        SELECT MAX(PhieuMuonID)
+        FROM PhieuMuon
+        WHERE PhieuMuonID LIKE 'PM%'
+    );
+
+    -- Tạo mã phiếu mượn mới nếu max_loan_id không null, ngược lại dùng mã mặc định PM01
+    IF max_loan_id IS NOT NULL THEN
+        SET new_loan_id = CONCAT('PM', LPAD(CAST(SUBSTRING(max_loan_id, 3) AS UNSIGNED) + 1, 2, '0'));
+    ELSE
+        SET new_loan_id = 'PM01';
+    END IF;
+
+    -- Thêm phiếu mượn mới vào bảng PhieuMuon
+    INSERT INTO PhieuMuon (PhieuMuonID, NhanVienID, SoThe, NgayMuon)
+    VALUES (new_loan_id, staff_id, card_id, loan_date);
+    
+     -- Loại bỏ khoảng trắng thừa trong chuỗi ISBN
+    SET clean_isbns = REPLACE(book_isbns, ' ', '');
+
+    -- Tính số lượng ISBN trong chuỗi sau khi đã loại bỏ khoảng trắng
+    SET isbn_count = LENGTH(clean_isbns) - LENGTH(REPLACE(clean_isbns, ',', '')) + 1;
+
+    -- Thêm chi tiết phiếu mượn vào bảng PhieuMuonChiTiet cho mỗi ISBN trong danh sách
+    WHILE pos <= isbn_count DO
+        SET isbn_value = SUBSTRING_INDEX(SUBSTRING_INDEX(clean_isbns, ',', pos), ',', -1);
+        INSERT INTO PhieuMuonChiTiet (PhieuMuonID, ISBN, DaTra)
+        VALUES (new_loan_id, isbn_value, FALSE);
+        SET pos = pos + 1;
+    END WHILE;
+
+    -- Commit nếu tất cả các lệnh đều thành công
+    COMMIT;
+
+    -- Trả về kết quả thành công
+    SET p_status = 0;
+    SET p_message = 'Tạo phiếu mượn và chi tiết phiếu mượn thành công!';
+END //
+
+DELIMITER ;
+
+-- Xóa độc phiếu mượn và chi tiết phiếu mượn
+DROP PROCEDURE IF EXISTS delete_loan_and_detail;
+DELIMITER //
+
+CREATE PROCEDURE delete_loan_and_detail(
+    IN phieumuon_id VARCHAR(10),
+    OUT p_status INT,
+    OUT p_message VARCHAR(255)
+)
+BEGIN
+    -- Xử lý lỗi: nếu có lỗi, rollback và gán thông báo lỗi
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_status = 1;
+        SET p_message = 'Đã xảy ra lỗi khi xóa phiếu mượn và chi tiết phiếu mượn!';
+    END;
+
+    -- Bắt đầu transaction
+    START TRANSACTION;
+
+    -- Xóa thẻ thư viện khỏi bảng TheThuVien trước khi xóa độc giả
+    DELETE FROM PhieuMuonChiTiet WHERE PhieuMuonID = phieumuon_id;
+
+    -- Xóa độc giả khỏi bảng DocGia
+    DELETE FROM PhieuMuon WHERE PhieuMuonID = phieumuon_id;
+
+    -- Commit nếu không có lỗi
+    COMMIT;
+
+    -- Trả về kết quả thành công
+    SET p_status = 0;
+    SET p_message = 'Xóa phiếu mượn và chi tiết phiếu mượn thành công!';
+END //
+
+DELIMITER ;
+
+
