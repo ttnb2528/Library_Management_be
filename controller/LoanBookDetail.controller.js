@@ -59,10 +59,12 @@ export const getLoanBookDetailById = async (req, res) => {
 export const updateLoanBookDetail = async (req, res) => {
   const { id, ISBN_OLD } = req.params;
 
-  const { ISBN, NgayTra, DaTra, Note } = req.body;
+  let { ISBN, NgayTra, DaTra, Note } = req.body;
 
   if (!NgayTra && DaTra === true) {
     NgayTra = new Date();
+  } else if (!NgayTra && DaTra === false) {
+    NgayTra = null;
   }
 
   try {
@@ -80,44 +82,86 @@ export const updateLoanBookDetail = async (req, res) => {
         );
       }
 
-      LoanBookDetail.getBookExist(ISBN, id, (err, bookExist) => {
+      LoanBookDetail.getBookExist(ISBN_OLD, id, (err, bookExist) => {
         if (err) {
           return res.json(
             jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage)
           );
         }
 
-        if (bookExist.length > 0) {
+        if (bookExist.length === 0) {
           return res.json(
             jsonGenerate(
               StatusCode.BADREQUEST,
-              "Sách đã tồn tại trong phiếu mượn"
+              "Sách cần cập nhật không tồn tại trong phiếu mượn"
             )
           );
         }
 
-        LoanBookDetail.update(
-          id,
-          ISBN,
-          NgayTra,
-          DaTra,
-          Note,
-          ISBN_OLD,
-          (err, result) => {
+        if (ISBN !== ISBN_OLD) {
+          LoanBookDetail.getBookExist(ISBN, id, (err, bookExist) => {
             if (err) {
               return res.json(
                 jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage)
               );
             }
 
-            return res.json(
-              jsonGenerate(
-                StatusCode.OK,
-                "Cập nhật chi tiết phiếu mượn thành công"
-              )
+            if (bookExist.length > 0) {
+              return res.json(
+                jsonGenerate(
+                  StatusCode.BADREQUEST,
+                  "Sách đã tồn tại trong phiếu mượn"
+                )
+              );
+            }
+
+            LoanBookDetail.update(
+              id,
+              ISBN,
+              NgayTra,
+              DaTra,
+              Note,
+              ISBN_OLD,
+              (err, result) => {
+                if (err) {
+                  return res.json(
+                    jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage)
+                  );
+                }
+
+                return res.json(
+                  jsonGenerate(
+                    StatusCode.OK,
+                    "Cập nhật chi tiết phiếu mượn thành công"
+                  )
+                );
+              }
             );
-          }
-        );
+          });
+        } else {
+          LoanBookDetail.update(
+            id,
+            ISBN,
+            NgayTra,
+            DaTra,
+            Note,
+            ISBN_OLD,
+            (err, result) => {
+              if (err) {
+                return res.json(
+                  jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage)
+                );
+              }
+
+              return res.json(
+                jsonGenerate(
+                  StatusCode.OK,
+                  "Cập nhật chi tiết phiếu mượn thành công"
+                )
+              );
+            }
+          );
+        }
       });
     });
   } catch (error) {
