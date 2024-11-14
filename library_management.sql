@@ -481,6 +481,43 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- Kiểm tra tính hợp lệ tài khoản vi phạm
+DROP TRIGGER IF EXISTS trg_check_vipham_fields
+DROP TRIGGER IF EXISTS trg_check_vipham_fields_update
+DELIMITER $$
+CREATE TRIGGER trg_check_vipham_fields
+BEFORE INSERT ON TaiKhoanViPham
+FOR EACH ROW
+BEGIN
+    
+    IF NEW.LyDo IS NULL OR NEW.LyDo = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Lý do không được để trống';
+    END IF;
+    
+    IF NEW.SoThe IS NULL OR NEW.SoThe = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Số thẻ không được để trống';
+    END IF;
+END $$
+
+CREATE TRIGGER trg_check_vipham_fields_update
+BEFORE UPDATE ON TaiKhoanViPham
+FOR EACH ROW
+BEGIN
+    
+    IF NEW.LyDo IS NULL OR NEW.LyDo = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Lý do không được để trống';
+    END IF;
+    
+    IF NEW.SoThe IS NULL OR NEW.SoThe = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Số thẻ không được để trống';
+    END IF;
+END $$
+DELIMITER ;
+
 
 
 
@@ -1175,3 +1212,65 @@ END //
 DELIMITER ;
 
 
+-- Tạo tài khoản vi phạm
+DROP PROCEDURE IF EXISTS create_vipham;
+DELIMITER //
+
+CREATE PROCEDURE create_vipham (
+    IN p_ngaykhoa DATE,
+    IN p_ngaymokhoa DATE,
+    IN p_lydo VARCHAR(255),
+    IN p_sothe VARCHAR(255),
+    OUT p_status INT,
+    OUT p_message VARCHAR(255)
+)
+vipham_label: BEGIN
+    DECLARE max_id VARCHAR(10);
+    DECLARE new_id VARCHAR(10);
+    DECLARE latest_ngaymokhoa DATE;
+    
+    -- select p_ngaykhoa as ngaykhoa,
+-- 			p_ngaymokhoa as ngaymokhoa;
+
+    -- Kiểm tra thẻ có bị khóa trước đó không
+    IF EXISTS (SELECT 1 FROM TaiKhoanViPham WHERE SoThe = p_sothe) THEN
+
+        -- Lấy NgayMoKhoa của lần vi phạm gần nhất
+        SELECT NgayMoKhoa INTO latest_ngaymokhoa
+        FROM TaiKhoanViPham
+        WHERE SoThe = p_sothe
+        ORDER BY NgayKhoa DESC
+        LIMIT 1;
+
+        -- Kiểm tra nếu NgayMoKhoa chưa đến hạn mở
+        IF latest_ngaymokhoa > CURDATE() THEN
+            SET p_status = 1;
+            SET p_message = 'Thẻ vẫn đang bị khóa! Không thể tạo vi phạm mới.';
+            LEAVE vipham_label;
+        END IF;
+    END IF;
+
+    -- Xác định mã vi phạm lớn nhất hiện tại với tiền tố "TVP"
+    SET max_id = (
+        SELECT MAX(ID)
+        FROM TaiKhoanViPham
+        WHERE ID LIKE 'TVP%'
+    );
+
+    -- Tạo mã mới nếu max_id không null, ngược lại dùng mã mặc định TVP01
+    IF max_id IS NOT NULL THEN
+        SET new_id = CONCAT('TVP', LPAD(SUBSTRING(max_id, 4) + 1, 2, '0'));
+    ELSE
+        SET new_id = 'TVP01';
+    END IF;
+
+    -- Thêm thẻ vi phạm mới vào database
+    INSERT INTO TaiKhoanViPham (ID, NgayKhoa, NgayMoKhoa, LyDo, SoThe)
+    VALUES (new_id, p_ngaykhoa, p_ngaymokhoa, p_lydo, p_sothe);
+
+    -- Trả về kết quả thành công
+    SET p_status = 0;
+    SET p_message = 'Tạo thẻ vi phạm thành công!';
+END //
+
+DELIMITER ;
