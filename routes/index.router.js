@@ -14,6 +14,8 @@ import EmployeeRouter from "./Employee.router.js";
 import LibraryCardRouter from "./LibraryCard.router.js";
 import ReaderRouter from "./Reader.router.js";
 import BookRouter from "./Book.router.js";
+import LoanBookRouter from "./LoanBook.router.js";
+import LoanBookDetailRouter from "./LoanBookDetail.router.js";
 
 app.use("/auth", AuthRouter);
 app.use("/author", AuthorRouter);
@@ -23,5 +25,7 @@ app.use("/employee", EmployeeRouter);
 app.use("/libraryCard", LibraryCardRouter);
 app.use("/reader", ReaderRouter);
 app.use("/book", BookRouter);
+app.use("/loanBook", LoanBookRouter);
+app.use("/loanBookDetail", LoanBookDetailRouter);
 
 export default app;
