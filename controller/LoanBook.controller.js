@@ -4,7 +4,9 @@ import LoanBook from "../model/LoanBook.model.js";
 
 // 1. Thêm phiếu mượn mới
 export const addLoanBook = async (req, res) => {
-  const { NhanVienID, SoThe, NgayMuon, ISBN } = req.body;
+  let { NhanVienID, SoThe, NgayMuon, ISBN } = req.body;
+
+  NgayMuon = new Date(NgayMuon);
 
   try {
     // Thêm phiếu mượn mới

@@ -1274,3 +1274,26 @@ vipham_label: BEGIN
 END //
 
 DELIMITER ;
+
+-- thống kê mượn sách
+
+DELIMITER //
+
+CREATE PROCEDURE ThongKeMuonSach(
+    IN so_thang INT,
+    OUT so_lan_muon INT,
+    OUT so_cuon_sach_muon INT
+)
+BEGIN
+    SELECT 
+        COUNT(DISTINCT pm.PhieuMuonID) INTO so_lan_muon,
+        COUNT(DISTINCT pmct.ISBN) INTO so_cuon_sach_muon
+    FROM 
+        PhieuMuon pm
+    JOIN 
+        PhieuMuonChiTiet pmct ON pm.PhieuMuonID = pmct.PhieuMuonID
+    WHERE 
+        pm.NgayMuon >= DATE_SUB(CURDATE(), INTERVAL so_thang MONTH);
+END //
+
+DELIMITER ;

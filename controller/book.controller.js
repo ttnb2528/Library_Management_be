@@ -4,7 +4,7 @@ import Book from "../model/Book.model.js";
 
 // 1. Thêm sách mới
 export const addBook = async (req, res) => {
-  let { TenSach, SoTrang, SoLuong, MoTa, ChuDeID, NXB_ID, TacGiaID, NamXB } =
+  let { TenSach, SoTrang, Soluong, MoTa, ChuDeID, NXB_ID, TacGiaID, NamXB } =
     req.body;
 
   NamXB = new Date(NamXB);
@@ -15,7 +15,7 @@ export const addBook = async (req, res) => {
     Book.create(
       TenSach,
       SoTrang,
-      SoLuong,
+      Soluong,
       MoTa,
       ChuDeID,
       NXB_ID,

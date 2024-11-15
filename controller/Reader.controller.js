@@ -4,7 +4,7 @@ import Reader from "../model/Reader.model.js";
 
 // 1. Thêm độc giả mới và thêm thẻ thư viện
 export const addReaderWithLibraryCard = async (req, res) => {
-  let { name, address, phone, start_date, end_date, note } = req.body;
+  let { TenDocGia, DiaChi, SDT, start_date, end_date, Note } = req.body;
 
   // Nếu start_date không có thì mặc định lấy ngày hiện tại
   if (!start_date) {
@@ -32,21 +32,16 @@ export const addReaderWithLibraryCard = async (req, res) => {
   }
 
   try {
-    // Kiểm tra nếu độc giả đã tồn tại
-    // if (await Reader.checkReaderExists("name", name)) {
-    //   return res.json(
-    //     jsonGenerate(StatusCode.BAD_REQUEST, "Độc giả này đã tồn tại")
-    //   );
-    // }
+
 
     // Thêm độc giả mới
     Reader.createReaderWithCard(
-      name,
-      address,
-      phone,
+      TenDocGia,
+      DiaChi,
+      SDT,
       start_date,
       end_date,
-      note,
+      Note,
       (err, result) => {
         if (err) {
           return res.json(

@@ -7,9 +7,9 @@ import Auth from "../model/Auth.model.js";
 
 // Đăng ký người dùng mới
 export const registerUser = async (req, res) => {
-  const { username, email, password, role, SDT } = req.body;
+  const { User_Name, Email, Pass_wd, Role, SDT } = req.body;
 
-  const HoTen = username;
+  const HoTen = User_Name;
   try {
     // Kiểm tra nếu email đã tồn tại qua model Auth
     // if (await Auth.checkEmailExists(email)) {
@@ -30,7 +30,7 @@ export const registerUser = async (req, res) => {
     // const hashedPassword = await bcrypt.hash(password, salt);
 
     // Tạo user qua model Auth
-    Auth.create(username, email, password, role, HoTen, SDT, (err, result) => {
+    Auth.create(User_Name, Email, Pass_wd, Role, HoTen, SDT, (err, result) => {
       if (err) {
         // console.error(err);
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
@@ -45,7 +45,7 @@ export const registerUser = async (req, res) => {
       }
 
       // return res.json(jsonGenerate(StatusCode.CREATED, "Đăng ký thành công!"));
-      return res.json(jsonGenerate(StatusCode.CREATED, message));
+      return res.json(jsonGenerate(StatusCode.OK, message));
     });
   } catch (error) {
     console.error(error);
@@ -159,7 +159,7 @@ export const getUserById = async (req, res) => {
 // Cập nhật thông tin người dùng
 export const updateUser = async (req, res) => {
   const { id } = req.params;
-  const { username, password, email, role } = req.body;
+  const { User_Name, Pass_wd, Email, Role } = req.body;
 
   try {
     // Kiểm tra nếu người dùng có tồn tại không
@@ -176,7 +176,7 @@ export const updateUser = async (req, res) => {
       }
 
       // Nếu người dùng tồn tại, tiến hành cập nhật thông tin
-      Auth.update(id, username, password, email, role, (err, result) => {
+      Auth.update(id, User_Name, Pass_wd, Email, Role, (err, result) => {
         if (err) {
           return res.json(
             jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage)

@@ -17,6 +17,7 @@ import BookRouter from "./Book.router.js";
 import LoanBookRouter from "./LoanBook.router.js";
 import LoanBookDetailRouter from "./LoanBookDetail.router.js";
 import AccountBreachRouter from "./AccountBreach.model.js";
+import ThongKeRouter from "./ThongKe.router.js";
 
 app.use("/auth", AuthRouter);
 app.use("/author", AuthorRouter);
@@ -29,5 +30,5 @@ app.use("/book", BookRouter);
 app.use("/loanBook", LoanBookRouter);
 app.use("/loanBookDetail", LoanBookDetailRouter);
 app.use("/accountBreach", AccountBreachRouter);
-
+app.use("/thongke", ThongKeRouter);
 export default app;
