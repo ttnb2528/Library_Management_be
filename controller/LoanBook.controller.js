@@ -82,7 +82,9 @@ export const getLoanBookById = async (req, res) => {
 // 4. Cập nhật thông tin phiếu mượn
 export const updateLoanBook = async (req, res) => {
   const { id } = req.params;
-  const { NhanVienID, SoThe, NgayMuon } = req.body;
+  let { NhanVienID, SoThe, NgayMuon } = req.body;
+
+  NgayMuon = new Date(NgayMuon);
 
   try {
     LoanBook.update(id, NhanVienID, SoThe, NgayMuon, (err, result) => {

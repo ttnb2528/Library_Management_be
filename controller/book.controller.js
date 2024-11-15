@@ -4,9 +4,10 @@ import Book from "../model/Book.model.js";
 
 // 1. Thêm sách mới
 export const addBook = async (req, res) => {
-  const { TenSach, SoTrang, Soluong, MoTa, ChuDeID, NXB_ID, TacGiaID, NamXB } =
+  let { TenSach, SoTrang, SoLuong, MoTa, ChuDeID, NXB_ID, TacGiaID, NamXB } =
     req.body;
 
+  NamXB = new Date(NamXB);
   console.log(NamXB);
 
   try {
@@ -14,7 +15,7 @@ export const addBook = async (req, res) => {
     Book.create(
       TenSach,
       SoTrang,
-      Soluong,
+      SoLuong,
       MoTa,
       ChuDeID,
       NXB_ID,
@@ -88,8 +89,10 @@ export const getBookById = async (req, res) => {
 // 4. Cập nhật thông tin sách
 export const updateBook = async (req, res) => {
   const { id } = req.params;
-  const { TenSach, SoTrang, Soluong, MoTa, ChuDeID, NXB_ID, TacGiaID, NamXB } =
+  let { TenSach, SoTrang, Soluong, MoTa, ChuDeID, NXB_ID, TacGiaID, NamXB } =
     req.body;
+
+  NamXB = new Date(NamXB);
 
   try {
     Book.getById(id, async (err, book) => {

@@ -58,7 +58,7 @@ export const getEmployeeById = async (req, res) => {
 // 4. Cập nhật thông tin nhân viên
 export const updateEmployee = async (req, res) => {
   const { id } = req.params;
-  const { full_name, birth_date, phone_number } = req.body;
+  const { HoTen, NgaySinh, SDT } = req.body;
 
   try {
     Employee.getById(id, (err, employee) => {
@@ -74,9 +74,9 @@ export const updateEmployee = async (req, res) => {
 
       Employee.update(
         id,
-        full_name,
-        birth_date,
-        phone_number,
+        HoTen,
+        NgaySinh,
+        SDT,
         (err, result) => {
           if (err) {
             return res.json(

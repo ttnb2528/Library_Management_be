@@ -15,7 +15,7 @@ const LibraryCard = {
 
   getById: (SoThe, callback) => {
     console.log(SoThe);
-    
+
     connection.query(
       "SELECT * FROM TheThuVien WHERE SoThe = ?",
       [SoThe],
@@ -23,10 +23,10 @@ const LibraryCard = {
     );
   },
 
-  update: (SoThe, start_date, end_date, callback) => {
+  update: (SoThe, start_date, end_date, note, callback) => {
     connection.query(
-      "UPDATE TheThuVien SET start_date = ?, end_date = ? WHERE SoThe = ?",
-      [start_date, end_date, SoThe],
+      "UPDATE TheThuVien SET start_date = ?, end_date = ?, note = ? WHERE SoThe = ?",
+      [start_date, end_date, note, SoThe],
       callback
     );
   },

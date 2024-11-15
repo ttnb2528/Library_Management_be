@@ -120,7 +120,7 @@ export const getReaderById = async (req, res) => {
 // 4. Cập nhật thông tin độc giả
 export const updateReader = async (req, res) => {
   const { id } = req.params;
-  const { name, address, phone } = req.body;
+  const { TenDocGia, DiaChi, SDT } = req.body;
 
   try {
     // Kiểm tra nếu độc giả tồn tại
@@ -129,13 +129,13 @@ export const updateReader = async (req, res) => {
         jsonGenerate(StatusCode.NOTFOUND, "Không tìm thấy độc giả")
       );
     }
-    Reader.update(id, name, address, phone, (err, result) => {
+    Reader.update(id, TenDocGia, DiaChi, SDT, (err, result) => {
       if (err) {
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
       }
       return res.json(
         jsonGenerate(
-          StatusCode.CREATED,
+          StatusCode.OK,
           "Cập nhật thông tin độc giả thành công"
         )
       );

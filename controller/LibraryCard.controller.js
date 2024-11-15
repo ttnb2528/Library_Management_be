@@ -99,25 +99,25 @@ export const getLibraryCardById = async (req, res) => {
 // 4. Cập nhật thông tin thẻ thư viện
 export const updateLibraryCard = async (req, res) => {
   const { id } = req.params;
-  let { start_date, end_date } = req.body;
+  let { Start_date, End_date, Note } = req.body;
 
-  // Nếu start_date không có thì mặc định lấy ngày hiện tại
-  if (!start_date) {
-    start_date = new Date();
+  // Nếu Start_date không có thì mặc định lấy ngày hiện tại
+  if (!Start_date) {
+    Start_date = new Date();
   } else {
-    start_date = new Date(start_date);
+    Start_date = new Date(Start_date);
   }
 
-  // Nếu end_date không có, mặc định là 1 năm sau ngày start_date
-  if (!end_date) {
-    end_date = new Date(start_date);
-    end_date.setFullYear(end_date.getFullYear() + 1);
+  // Nếu End_date không có, mặc định là 1 năm sau ngày Start_date
+  if (!End_date) {
+    End_date = new Date(Start_date);
+    End_date.setFullYear(End_date.getFullYear() + 1);
   } else {
-    end_date = new Date(end_date);
+    End_date = new Date(End_date);
   }
 
-  // Kiểm tra nếu end_date phải lớn hơn start_date
-  if (end_date <= start_date) {
+  // Kiểm tra nếu End_date phải lớn hơn Start_date
+  if (End_date <= Start_date) {
     return res.json(
       jsonGenerate(
         StatusCode.BAD_REQUEST,
@@ -133,7 +133,7 @@ export const updateLibraryCard = async (req, res) => {
       );
     }
 
-    LibraryCard.update(id, start_date, end_date, (err, result) => {
+    LibraryCard.update(id, Start_date, End_date, Note, (err, result) => {
       if (err) {
         return res.json(jsonGenerate(StatusCode.SERVER_ERROR, err.sqlMessage));
       }
